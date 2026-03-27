@@ -263,19 +263,47 @@ export default function SalaryPage() {
       <div className="flex flex-col lg:flex-row gap-6 items-start">
 
         {/* ── LEFT PANEL: Summary ── */}
-        <aside className="w-full lg:w-60 shrink-0 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Summary</p>
-          <SummaryRow label="Salary per Day"  value="1200" />
-          <SummaryRow label="Salary per Hour" value="150" />
-          <SummaryRow label="OT pay"          value="0" />
-          <SummaryRow label="Gross salary"    value="30000" />
-          <SummaryRow label="Time penalty"    value="0" />
-          <SummaryRow label="Leave penalty"   value="0" />
-          <div className="mt-3 rounded-lg bg-blue-600 px-3 py-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-100">Total deduction</span>
-            <span className="text-sm font-bold text-white">200000001200</span>
-          </div>
-        </aside>
+        {(() => {
+          const basic       = Number(form.basicSalary) || 0;
+          const workDays    = Number(form.workingDays) || 0;
+          const workHours   = Number(form.workingHours) || 0;
+          const otHrs       = Number(form.otHours) || 0;
+          const incentive   = Number(form.incentive) || 0;
+          const arrears     = Number(form.arrears) || 0;
+          const tada        = Number(form.tada) || 0;
+          const bonus       = Number(form.bonus) || 0;
+          const profTax     = Number(form.professionalTax) || 0;
+          const advTaken    = Number(form.advanceTaken) || 0;
+          const addlAdv     = Number(form.additionalAdvance) || 0;
+          const advDeducted = Number(form.advanceDeducted) || 0;
+          const extraFine   = Number(form.extraFine) || 0;
+          const emi         = Number(form.emi) || 0;
+          const minusMinsRs = Number(form.minusMinutesRupees) || 0;
+
+          const salaryPerDay  = workDays > 0 ? Math.round(basic / workDays) : 0;
+          const salaryPerHour = workHours > 0 ? Math.round(basic / workHours) : 0;
+          const otPay         = otHrs * salaryPerHour;
+          const grossSalary   = basic + incentive + arrears + tada + bonus + otPay;
+          const timePenalty   = minusMinsRs;
+          const leavePenalty  = 0;
+          const totalDeduction = profTax + advTaken + addlAdv + advDeducted + extraFine + emi + timePenalty + leavePenalty;
+
+          return (
+            <aside className="w-full lg:w-60 shrink-0 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+              <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Summary</p>
+              <SummaryRow label="Salary per Day"  value={String(salaryPerDay)} />
+              <SummaryRow label="Salary per Hour" value={String(salaryPerHour)} />
+              <SummaryRow label="OT pay"          value={String(otPay)} />
+              <SummaryRow label="Gross salary"    value={String(grossSalary)} />
+              <SummaryRow label="Time penalty"    value={String(timePenalty)} />
+              <SummaryRow label="Leave penalty"   value={String(leavePenalty)} />
+              <div className="mt-3 rounded-lg bg-blue-600 px-3 py-3 flex items-center justify-between">
+                <span className="text-xs font-semibold text-blue-100">Total deduction</span>
+                <span className="text-sm font-bold text-white">{totalDeduction}</span>
+              </div>
+            </aside>
+          );
+        })()}
 
         {/* ── RIGHT PANEL: Form ── */}
         <form onSubmit={handleSubmit} noValidate className="flex-1 w-full">
