@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 
 const departmentRoutes = require("./routes/department.routes");
+const employeeRoutes = require("./routes/employee.routes");
 const errorMiddleware = require("./middlewares/error.middleware");
 
 // Global Middleware
@@ -11,6 +12,7 @@ app.use(express.json());
 
 // ✅ CORRECT BASE PATH
 app.use("/api/departments", departmentRoutes);
+app.use("/api/employees", employeeRoutes);
 
 // health check
 app.get("/api/health", (req, res) => {
