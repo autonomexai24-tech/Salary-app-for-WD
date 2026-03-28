@@ -58,4 +58,9 @@ async function deleteDepartment(req, res, next) {
   }
 }
 
-module.exports = { createDepartment, getDepartments, updateDepartment, deleteDepartment };
+module.exports = {
+  createDepartment,
+  getDepartments,
+  updateDepartment,
+  deleteDepartment,
+};
