@@ -7,7 +7,11 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API}${endpoint}`;
+  let baseUrl = API.endsWith('/') ? API.slice(0, -1) : API;
+  if (!baseUrl.endsWith('/api')) {
+    baseUrl += '/api';
+  }
+  const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   // Log API URL as requested
   console.log("API URL:", url);

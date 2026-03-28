@@ -17,6 +17,11 @@ app.get("/api/health", (req, res) => {
   res.json({ success: true });
 });
 
+// JSON 404 Handler (prevents sending back HTML to frontend if route is wrong)
+app.use((_req, res) => {
+  res.status(404).json({ success: false, message: "API Route not found" });
+});
+
 // Centralized Error Handler
 app.use(errorMiddleware);
 
