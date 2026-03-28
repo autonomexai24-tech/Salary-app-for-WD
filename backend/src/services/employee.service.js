@@ -5,19 +5,41 @@ const prisma = require("../utils/prisma");
  */
 
 async function createEmployee(data) {
-  // Validate department exists and is not soft-deleted
-  const department = await prisma.department.findUnique({
-    where: { 
-      id: data.departmentId, 
-      is_deleted: false 
-    },
-  });
+  // 1. If departmentId exists, validate normally
+  if (data.departmentId) {
+    const department = await prisma.department.findUnique({
+      where: { 
+        id: data.departmentId, 
+      },
+    });
 
-  if (!department) {
-    const error = new Error("Invalid department");
-    error.statusCode = 400;
-    throw error;
+    if (!department || department.is_deleted) {
+      const error = new Error("Invalid department");
+      error.statusCode = 400;
+      throw error;
+    }
+  } 
+  // 2. ELSE if department (name) exists, fetch it and map ID
+  else if (data.department) {
+    const dept = await prisma.department.findFirst({
+      where: {
+        name: { equals: data.department, mode: "insensitive" },
+        is_deleted: false,
+      },
+    });
+
+    if (!dept) {
+      const error = new Error("Invalid department");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Replace the name mapping with the newly located UUID
+    data.departmentId = dept.id;
   }
+
+  // 3. Clean input so Prisma doesn't throw on unknown field mapping
+  delete data.department;
 
   // Create employee
   const employee = await prisma.employee.create({
@@ -81,6 +103,9 @@ async function updateEmployee(id, data) {
       throw error;
     }
   }
+
+  // Clean input to safely prevent Prisma relational field crashes
+  delete data.department;
 
   // Update fields
   const updated = await prisma.employee.update({

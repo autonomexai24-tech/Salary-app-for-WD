@@ -15,7 +15,12 @@ const createEmployeeSchema = z.object({
   salary: z.number({ required_error: "Salary is required" }).min(0, "Salary cannot be negative"),
   previousSalary: z.number().optional().nullable(),
   permittedLeaves: z.number().int().optional().nullable(),
-  departmentId: z.string({ required_error: "Department ID is required" }).uuid("Invalid department UUID format"),
+  
+  departmentId: z.string().uuid("Invalid department UUID format").optional().nullable(),
+  department: z.string().trim().optional().nullable(),
+}).refine(data => data.departmentId || data.department, {
+  message: "Either departmentId or department (name) must be provided",
+  path: ["departmentId"],
 });
 
 module.exports = {
