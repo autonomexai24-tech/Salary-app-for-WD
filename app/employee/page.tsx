@@ -83,10 +83,14 @@ const inputClass =
 const selectClass =
   "w-full h-11 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-sm text-neutral-800 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all appearance-none cursor-pointer";
 
+import { createEmployee } from "@/lib/api";
+
 export default function EmployeePage() {
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -96,6 +100,7 @@ export default function EmployeePage() {
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
+    if (apiError) setApiError(""); // Clear global error on typed input
   }
 
   function validate(): boolean {
@@ -108,10 +113,20 @@ export default function EmployeePage() {
     return Object.keys(newErrors).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (validate()) {
+    if (!validate()) return;
+    
+    setLoading(true);
+    setApiError("");
+
+    try {
+      await createEmployee(form);
       setSubmitted(true);
+    } catch (err: any) {
+      setApiError(err.message || "Something went wrong sending data to the server.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -367,13 +382,21 @@ export default function EmployeePage() {
 
         </div>
 
+        {/* API Error Display */}
+        {apiError && (
+          <div className="mt-6 p-4 rounded-lg bg-red-50 text-red-600 border border-red-200 text-sm">
+            {apiError}
+          </div>
+        )}
+
         {/* Submit */}
         <div className="flex justify-center mt-8">
           <button
             type="submit"
-            className="h-11 px-10 rounded-lg bg-blue-600 text-white text-sm font-semibold tracking-wide uppercase hover:bg-blue-700 active:scale-[0.98] transition-all shadow-sm"
+            disabled={loading}
+            className="h-11 px-10 rounded-lg bg-blue-600 text-white text-sm font-semibold tracking-wide uppercase hover:bg-blue-700 active:scale-[0.98] transition-all shadow-sm disabled:opacity-50 disabled:pointer-events-none"
           >
-            Register
+            {loading ? "Registering..." : "Register"}
           </button>
         </div>
       </form>

@@ -109,3 +109,33 @@ export async function deleteDepartment(
     method: "DELETE",
   });
 }
+
+// ─── Employee API calls ──────────────────────────────────────
+
+export async function createEmployee(payload: Record<string, any>) {
+  // Convert messy frontend strings back to clean data
+  const data = {
+    firstName: payload.firstName,
+    lastName: payload.lastName,
+    phone: payload.phone,
+    address: payload.address || undefined,
+    dateOfBirth: payload.dob || undefined,
+    gender: payload.gender || undefined,
+    qualification: payload.qualification || undefined,
+    // Safely extract floats out of UI currency strings ("₹ 35,000" -> 35000)
+    salary: parseFloat(String(payload.salary).replace(/[^0-9.]/g, "")) || 0,
+    previousSalary: payload.previousSalary
+      ? parseFloat(String(payload.previousSalary).replace(/[^0-9.]/g, ""))
+      : undefined,
+    permittedLeaves: payload.permittedLeaves
+      ? parseInt(String(payload.permittedLeaves).replace(/[^0-9]/g, ""), 10)
+      : undefined,
+    // The backend string->UUID fallback will use this
+    department: payload.department || undefined,
+  };
+
+  return request("/employees", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
