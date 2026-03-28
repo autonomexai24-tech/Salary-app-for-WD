@@ -8,7 +8,7 @@ const {
 /**
  * POST /api/departments
  */
-async function create(req, res, next) {
+async function createDepartment(req, res, next) {
   try {
     const data = departmentBodySchema.parse(req.body);
     const department = await departmentService.createDepartment(data);
@@ -21,7 +21,7 @@ async function create(req, res, next) {
 /**
  * GET /api/departments
  */
-async function getAll(req, res, next) {
+async function getDepartments(req, res, next) {
   try {
     const params = paginationSchema.parse(req.query);
     const result = await departmentService.getDepartments(params);
@@ -34,7 +34,7 @@ async function getAll(req, res, next) {
 /**
  * PUT /api/departments/:id
  */
-async function update(req, res, next) {
+async function updateDepartment(req, res, next) {
   try {
     const { id } = uuidParamSchema.parse(req.params);
     const data = departmentBodySchema.parse(req.body);
@@ -48,7 +48,7 @@ async function update(req, res, next) {
 /**
  * DELETE /api/departments/:id
  */
-async function remove(req, res, next) {
+async function deleteDepartment(req, res, next) {
   try {
     const { id } = uuidParamSchema.parse(req.params);
     await departmentService.softDeleteDepartment(id);
@@ -58,4 +58,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { create, getAll, update, remove };
+module.exports = { createDepartment, getDepartments, updateDepartment, deleteDepartment };

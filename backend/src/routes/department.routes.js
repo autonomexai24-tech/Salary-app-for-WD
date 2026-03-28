@@ -1,11 +1,11 @@
-const { Router } = require("express");
-const departmentController = require("../controllers/department.controller");
+const express = require("express");
+const router = express.Router();
 
-const router = Router();
+const controller = require("../controllers/department.controller");
 
-router.post("/", departmentController.create);
-router.get("/", departmentController.getAll);
-router.put("/:id", departmentController.update);
-router.delete("/:id", departmentController.remove);
+router.post("/", controller.createDepartment);
+router.get("/", controller.getDepartments);
+router.put("/:id", controller.updateDepartment);
+router.delete("/:id", controller.deleteDepartment);
 
 module.exports = router;
