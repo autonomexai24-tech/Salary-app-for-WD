@@ -130,8 +130,9 @@ export async function createEmployee(payload: Record<string, any>) {
     permittedLeaves: payload.permittedLeaves
       ? parseInt(String(payload.permittedLeaves).replace(/[^0-9]/g, ""), 10)
       : undefined,
-    // The backend string->UUID fallback will use this
-    department: payload.department || undefined,
+    // Use the fetched department ID directly
+    departmentId: payload.department || undefined,
+    department: undefined,
   };
 
   return request("/employees", {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 
 interface FormState {
@@ -83,7 +83,7 @@ const inputClass =
 const selectClass =
   "w-full h-11 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-sm text-neutral-800 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all appearance-none cursor-pointer";
 
-import { createEmployee } from "@/lib/api";
+import { createEmployee, getDepartments, Department } from "@/lib/api";
 
 export default function EmployeePage() {
   const [form, setForm] = useState<FormState>(initialState);
@@ -91,6 +91,19 @@ export default function EmployeePage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [departments, setDepartments] = useState<Department[]>([]);
+
+  useEffect(() => {
+    async function fetchDepts() {
+      try {
+        const res = await getDepartments(1, 100);
+        if (res.success) setDepartments(res.data);
+      } catch (err) {
+        console.error("Failed to fetch departments", err);
+      }
+    }
+    fetchDepts();
+  }, []);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -203,11 +216,11 @@ export default function EmployeePage() {
           <Field label="Department">
             <select name="department" value={form.department} onChange={handleChange} className={selectClass}>
               <option value="">Select department</option>
-              <option>Production</option>
-              <option>Accounts</option>
-              <option>Logistics</option>
-              <option>HR</option>
-              <option>Quality Control</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
             </select>
           </Field>
 
