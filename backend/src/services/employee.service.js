@@ -41,45 +41,39 @@ async function createEmployee(data) {
   // 3. Clean department name field — Prisma only wants departmentId
   delete data.department;
 
-  // 4. Employer linking: if previousCompany provided, find-or-create Employer
-  let employerId = null;
+  // 4. Employer linking: use employee's firstName + lastName as employer name
+  const employerName = `${data.firstName} ${data.lastName}`.trim();
 
-  if (data.previousCompany) {
-    const employerName = data.previousCompany.trim();
+  // 4a. Ensure company exists (MANDATORY — employer requires companyId)
+  let company = await prisma.company.findFirst();
+  if (!company) {
+    company = await prisma.company.create({
+      data: { name: "Default Company" },
+    });
+  }
 
-    // 4a. Ensure company exists (MANDATORY — employer requires companyId)
-    let company = await prisma.company.findFirst();
-    if (!company) {
-      company = await prisma.company.create({
-        data: { name: "Default Company" },
-      });
-    }
+  // 4b. Find employer (case-insensitive to prevent duplicates)
+  let employer = await prisma.employer.findFirst({
+    where: {
+      name: { equals: employerName, mode: "insensitive" },
+    },
+  });
 
-    // 4b. Find employer (case-insensitive to prevent duplicates)
-    let employer = await prisma.employer.findFirst({
-      where: {
-        name: { equals: employerName, mode: "insensitive" },
+  // 4c. Create employer if not found
+  if (!employer) {
+    employer = await prisma.employer.create({
+      data: {
+        name: employerName,
+        companyId: company.id,
       },
     });
+  }
 
-    // 4c. Create employer if not found
-    if (!employer) {
-      employer = await prisma.employer.create({
-        data: {
-          name: employerName,
-          companyId: company.id,
-        },
-      });
-    }
-
-    // 4d. Hard guarantee — no silent failure
-    if (!employer || !employer.id) {
-      const error = new Error("Employer creation failed");
-      error.statusCode = 500;
-      throw error;
-    }
-
-    employerId = employer.id;
+  // 4d. Hard guarantee — no silent failure
+  if (!employer || !employer.id) {
+    const error = new Error("Employer creation failed");
+    error.statusCode = 500;
+    throw error;
   }
 
   // Clean previousCompany — not a Prisma column
@@ -89,7 +83,7 @@ async function createEmployee(data) {
   const employee = await prisma.employee.create({
     data: {
       ...data,
-      ...(employerId ? { employerId } : {}),
+      employerId: employer.id,
     },
   });
 
