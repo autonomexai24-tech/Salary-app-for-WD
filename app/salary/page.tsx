@@ -3,6 +3,12 @@
 import { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import { getEmployees, createSalary } from "@/lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Download, FileText, CalendarDays, CreditCard, Banknote } from "lucide-react";
 
 interface SalaryForm {
   employees: string;
@@ -80,132 +86,257 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ── Payslip columns ── */
-const PAYSLIP_COLS = [
-  "Basic","Incentives","Bonus","TA/DA","Arrears",
-  "Prof.tax","Adv.pay","Addition adv","Adv deducted",
-  "Extra fine","Leave penalty","Time penalty",
-];
-
+/* ── Payslip Modal ── */
 function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void }) {
   if (!payslip) return null;
 
-  const d = payslip.data;
-  const s = d.salary;
-  const t = d.totals;
+  const d = payslip.data || payslip;
+  const s = d.salary || {};
+  const t = d.totals || {};
 
-  const PAYSLIP_VALS = [
-    String(s.basicSalary), String(s.incentive), String(s.bonus), String(s.taDa), String(s.arrears),
-    String(s.professionalTax), String(s.advanceTaken), "0", String(s.advanceDeducted),
-    "0", "0", "0",
-  ];
+  const basicSalary = Number(s.basicSalary) || 0;
+  const workingDays = Number(s.workingDays) || 26;
+  const workingHours = Number(s.workingHours) || (workingDays * 8);
+
+  const perDay = workingDays > 0 ? (basicSalary / workingDays).toFixed(2) : "0.00";
+  const perHour = workingHours > 0 ? (basicSalary / workingHours).toFixed(2) : "0.00";
+
+  const totalEarnings = (
+    basicSalary +
+    (Number(s.incentive) || 0) +
+    (Number(s.taDa) || 0) +
+    (Number(s.arrears) || 0) +
+    (Number(s.bonus) || 0) +
+    (Number(s.otHours) * (basicSalary / Math.max(1, workingHours))) || 0
+  );
+
+  const totalDeductions = (
+    (Number(s.professionalTax) || 0) +
+    (Number(s.advanceTaken) || 0) +
+    (Number(s.advanceDeducted) || 0) +
+    (Number(s.extraFine) || 0) +
+    (Number(s.emi) || 0) +
+    (Number(s.minusMinutes) || 0)
+  );
+
+  const displayEarnings = Number(totalEarnings).toFixed(0);
+  const displayGross = t.gross ? String(t.gross).replace(/[^\d.]/g, '') : displayEarnings;
+  const displayDeductionsStr = t.deduction ? String(t.deduction).replace(/[^\d.]/g, '') : Number(totalDeductions).toFixed(0);
+  
+  const computedNet = Number(displayGross) - Number(displayDeductionsStr);
+  const displayNetStr = t.net ? String(t.net).replace(/[^\d.]/g, '') : String(computedNet);
+
+  const daysPresent = workingDays - (Number(s.leavesTaken) || 0);
+
+  const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/payslip/${payslip.id}/download`;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
-          <h2 className="text-base font-bold text-neutral-800">Payslip</h2>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors text-neutral-500 text-lg leading-none"
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[80vh]">
-          {/* ── TOP SECTION ── */}
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div className="space-y-1">
-              <p className="text-xs text-neutral-400 uppercase tracking-wide font-semibold">Employee Name</p>
-              <p className="text-sm font-bold text-neutral-800">{d.employeeName}</p>
-              <p className="text-xs text-neutral-500 mt-2">{d.email}</p>
+      <div className="bg-slate-50 w-full max-w-5xl max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        
+        {/* HEADER SECTION */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 py-5 bg-white border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 flex border rounded-lg items-center justify-center bg-blue-50 border-blue-100 text-blue-600">
+              <FileText className="w-5 h-5" />
             </div>
-
-            <div className="space-y-1 text-right flex-1">
-              <p className="text-xs text-neutral-400 uppercase tracking-wide font-semibold">Position</p>
-              <p className="text-sm font-bold text-neutral-800">{d.position}</p>
-              <p className="text-xs text-neutral-500 mt-2">Payslip For: <span className="font-semibold text-neutral-700">{d.month} / {d.year}</span></p>
-            </div>
-
-            <div className="shrink-0 w-20 h-16 border-2 border-dashed border-neutral-300 rounded-lg flex items-center justify-center">
-              <span className="text-[10px] text-neutral-400 text-center leading-tight">Logo</span>
-            </div>
-          </div>
-
-          {/* ── TABLE SECTION ── */}
-          <div className="overflow-x-auto rounded-lg border border-neutral-200 mb-6">
-            <table className="w-full text-xs min-w-max">
-              <thead>
-                <tr className="bg-neutral-50 border-b border-neutral-200">
-                  {PAYSLIP_COLS.map((col) => (
-                    <th
-                      key={col}
-                      className="px-3 py-2.5 text-left font-semibold text-neutral-500 uppercase tracking-wide border-r border-neutral-200 last:border-r-0 whitespace-nowrap"
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  {PAYSLIP_VALS.map((val, i) => (
-                    <td
-                      key={i}
-                      className="px-3 py-3 text-neutral-800 font-medium border-r border-neutral-200 last:border-r-0 whitespace-nowrap"
-                    >
-                      {val}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── BOTTOM SECTION ── */}
-          <div className="flex items-start justify-between gap-6">
-            <div className="space-y-2 min-w-[160px]">
-              <div className="flex justify-between gap-8">
-                <span className="text-xs text-neutral-500">Gross</span>
-                <span className="text-sm font-semibold text-neutral-800">{t.gross}</span>
-              </div>
-              <div className="flex justify-between gap-8">
-                <span className="text-xs text-neutral-500">Deduction</span>
-                <span className="text-sm font-semibold text-neutral-800">{t.deduction}</span>
-              </div>
-              <div className="flex justify-between gap-8 border-t border-neutral-200 pt-2 mt-1">
-                <span className="text-xs font-bold text-neutral-700">Net Salary</span>
-                <span className="text-sm font-bold text-blue-600">{t.net}/-</span>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <p className="text-xs text-neutral-500 italic mb-6">signature of proprietor</p>
-              <p className="text-[11px] text-neutral-400 leading-relaxed max-w-xs">
-                #51-B, Behind Mahaveer school,<br />
-                Bailappanavar nagar, Hubli-29
+            <div>
+              <h2 className="text-xl font-bold text-slate-800 tracking-tight">Salary Slip Preview</h2>
+              <p className="text-sm font-medium text-slate-500 mt-0.5 flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5" />
+                {d.month} {d.year}
               </p>
             </div>
           </div>
+          
+          <div className="mt-4 sm:mt-0 flex gap-2">
+            <Badge variant="outline" className="bg-white px-3 py-1.5 text-xs text-slate-700">
+              <span className="text-slate-500 mr-2">Total Days</span>
+              <span className="font-bold">{workingDays}</span>
+            </Badge>
+            <Badge variant="outline" className="bg-white px-3 py-1.5 text-xs text-slate-700">
+              <span className="text-slate-500 mr-2">Present</span>
+              <span className="font-bold text-green-600">{daysPresent}</span>
+            </Badge>
+            <Badge variant="outline" className="bg-white px-3 py-1.5 text-xs text-slate-700">
+              <span className="text-slate-500 mr-2">Leaves</span>
+              <span className="font-bold text-red-500">{s.leavesTaken || 0}</span>
+            </Badge>
+          </div>
+        </div>
 
-          {/* ── DOWNLOAD BUTTON ── */}
-          <div className="flex justify-end mt-6 pt-4 border-t border-neutral-100">
-            <a
-              href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/payslip/${payslip.id}/download`}
-              target="_blank"
-              download
-              className="h-11 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white flex items-center justify-center text-sm font-semibold transition-all shadow-sm"
-            >
-              Download PDF
-            </a>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          
+          {/* EMPLOYEE INFO */}
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="py-3 px-4 border-b border-slate-100 bg-slate-50/50">
+              <CardTitle className="text-xs text-slate-500 uppercase tracking-wider">Employee Information</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-y-4 gap-x-6">
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-1">Full Name</p>
+                <p className="text-sm font-semibold text-slate-900">{d.employeeName || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-1">Employee ID</p>
+                <p className="text-sm font-semibold text-slate-900">{d.employeeId ? `#${d.employeeId}` : "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-1">Designation</p>
+                <p className="text-sm font-semibold text-slate-900">{d.position || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-1">Department</p>
+                <p className="text-sm font-semibold text-slate-900">{d.department || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-1">Email</p>
+                <p className="text-sm font-semibold text-slate-900 truncate">{d.email || "N/A"}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* FINANCIAL SUMMARY DASHBOARD */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="p-5">
+                <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Gross Salary</p>
+                <p className="text-xl font-bold text-slate-800">₹ {Number(displayGross).toLocaleString('en-IN')}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="p-5">
+                <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Salary Breakdown</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Per Month</span>
+                    <span className="font-semibold text-slate-700">₹ {Number(basicSalary).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Per Day</span>
+                    <span className="font-semibold text-slate-700">₹ {perDay}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Per Hour</span>
+                    <span className="font-semibold text-slate-700">₹ {perHour}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="p-5">
+                <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Total Deductions</p>
+                <p className="text-xl font-bold text-red-500">₹ {Number(displayDeductionsStr).toLocaleString('en-IN')}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-green-200 bg-green-50 shadow-sm">
+              <CardContent className="p-5 flex flex-col justify-center h-full">
+                <p className="text-xs font-bold text-green-700 mb-1 uppercase tracking-wider">Net Salary</p>
+                <p className="text-3xl font-black text-green-600 drop-shadow-sm">₹ {Number(displayNetStr).toLocaleString('en-IN')}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* EARNINGS & DEDUCTIONS TABLES */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            
+            {/* Earnings */}
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="bg-slate-100/80 px-4 py-3 border-b border-slate-200">
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Banknote className="w-4 h-4 text-slate-500" /> Earnings
+                </h4>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                    <TableHead className="w-[60%] font-semibold text-slate-500 h-9">Description</TableHead>
+                    <TableHead className="text-right font-semibold text-slate-500 h-9">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium py-2.5">Basic Salary</TableCell>
+                    <TableCell className="text-right py-2.5">₹ {basicSalary}</TableCell>
+                  </TableRow>
+                  {Number(s.incentive) > 0 && <TableRow><TableCell className="font-medium py-2.5">Incentives</TableCell><TableCell className="text-right py-2.5">₹ {s.incentive}</TableCell></TableRow>}
+                  {Number(s.taDa) > 0 && <TableRow><TableCell className="font-medium py-2.5">TA/DA</TableCell><TableCell className="text-right py-2.5">₹ {s.taDa}</TableCell></TableRow>}
+                  {Number(s.arrears) > 0 && <TableRow><TableCell className="font-medium py-2.5">Arrears</TableCell><TableCell className="text-right py-2.5">₹ {s.arrears}</TableCell></TableRow>}
+                  {Number(s.bonus) > 0 && <TableRow><TableCell className="font-medium py-2.5">Bonus</TableCell><TableCell className="text-right py-2.5">₹ {s.bonus}</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+              <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex justify-between items-center">
+                <span className="text-sm font-semibold text-slate-600">Total Earnings</span>
+                <span className="text-sm font-bold text-slate-900">₹ {Number(displayGross).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            {/* Deductions */}
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="bg-slate-100/80 px-4 py-3 border-b border-slate-200">
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-slate-500" /> Deductions
+                </h4>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                    <TableHead className="w-[60%] font-semibold text-slate-500 h-9">Description</TableHead>
+                    <TableHead className="text-right font-semibold text-slate-500 h-9">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Number(s.professionalTax) > 0 && <TableRow><TableCell className="font-medium py-2.5">Professional Tax</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.professionalTax}</TableCell></TableRow>}
+                  {Number(s.advanceTaken) > 0 && <TableRow><TableCell className="font-medium py-2.5">Advance</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.advanceTaken}</TableCell></TableRow>}
+                  {Number(s.advanceDeducted) > 0 && <TableRow><TableCell className="font-medium py-2.5">Advance Deducted</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.advanceDeducted}</TableCell></TableRow>}
+                  {Number(s.extraFine) > 0 && <TableRow><TableCell className="font-medium py-2.5">Fine / Penalty</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.extraFine}</TableCell></TableRow>}
+                  {Number(s.emi) > 0 && <TableRow><TableCell className="font-medium py-2.5">EMI</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.emi}</TableCell></TableRow>}
+                  {Number(s.minusMinutes) > 0 && <TableRow><TableCell className="font-medium py-2.5">Time Penalty / Late Arrival</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.minusMinutes}</TableCell></TableRow>}
+                  {totalDeductions === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={2} className="h-14 text-center text-slate-400 italic">No deductions applied</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex justify-between items-center">
+                <span className="text-sm font-semibold text-slate-600">Total Deductions</span>
+                <span className="text-sm font-bold text-red-600">₹ {Number(displayDeductionsStr).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            
           </div>
 
         </div>
+
+        {/* FOOTER & ACTIONS */}
+        <div className="border-t border-slate-200 bg-white px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <Alert className="border-amber-200 bg-amber-50 text-amber-800 p-3 sm:w-auto w-full py-2 flex items-center pt-2 pb-2">
+            <AlertCircle className="h-4 w-4 text-amber-600 mr-2" />
+            <AlertDescription className="text-xs font-medium">
+              Once generated, this payslip snapshot will be permanent.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+            <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
+              Back to Edit
+            </Button>
+            <Button className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-sm" asChild>
+              <a href={downloadUrl} target="_blank" download>
+                <Download className="w-4 h-4 mr-2" />
+                Generate & Download PDF
+              </a>
+            </Button>
+          </div>
+        </div>
+
       </div>
     </div>
   );
