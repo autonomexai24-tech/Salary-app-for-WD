@@ -38,6 +38,11 @@ async function getEmployers({ page = 1, limit = 50 } = {}) {
       include: {
         company: { select: { name: true } },
         _count: { select: { employees: true } },
+        employees: {
+          include: {
+            department: true,
+          },
+        },
       },
     }),
     prisma.employer.count(),
@@ -82,10 +87,8 @@ async function updateEmployer(id, data) {
  * Delete an employer by ID.
  */
 async function deleteEmployer(id) {
-  // Check if employer has linked employees
   const employer = await prisma.employer.findUnique({
     where: { id },
-    include: { _count: { select: { employees: true } } },
   });
 
   if (!employer) {
@@ -94,13 +97,17 @@ async function deleteEmployer(id) {
     throw error;
   }
 
-  if (employer._count.employees > 0) {
-    const error = new Error("Cannot delete employer with linked employees. Reassign them first.");
-    error.statusCode = 400;
-    throw error;
-  }
+  // Safe delete: Unlink employees first, then delete employer
+  await prisma.$transaction([
+    prisma.employee.updateMany({
+      where: { employerId: id },
+      data: { employerId: null },
+    }),
+    prisma.employer.delete({
+      where: { id },
+    }),
+  ]);
 
-  await prisma.employer.delete({ where: { id } });
   return { message: "Employer deleted successfully" };
 }
 
