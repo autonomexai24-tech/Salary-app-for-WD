@@ -139,6 +139,8 @@ export async function createEmployee(payload: Record<string, any>) {
     // Use the fetched department ID directly
     departmentId: payload.department || undefined,
     department: undefined,
+    // Send previousCompany so backend can auto-create employer
+    previousCompany: payload.previousCompany?.trim() || undefined,
   };
 
   return request("/employees", {
