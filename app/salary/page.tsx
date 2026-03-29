@@ -222,7 +222,11 @@ export default function SalaryPage() {
     async function load() {
       try {
         const res = await getEmployees();
-        setEmployeesData(res.data || []);
+        // Handle possible nested structures from the backend API, if it wraps inside .data
+        const arr = Array.isArray(res.data) 
+          ? res.data 
+          : (Array.isArray(res.data?.data) ? res.data.data : []);
+        setEmployeesData(arr);
       } catch (err) {
         console.error("Failed loading employees", err);
       }
@@ -232,7 +236,21 @@ export default function SalaryPage() {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
+    
+    setForm((p) => {
+      const nextForm = { ...p, [name]: value };
+      
+      // Auto-populate numeric fields from the employee definition
+      if (name === "employees") {
+        const selected = employeesData.find((emp) => emp.id === value);
+        if (selected) {
+          nextForm.basicSalary = String(selected.salary || 0);
+          nextForm.professionalTax = String(selected.professionalTax || 0);
+        }
+      }
+      return nextForm;
+    });
+
     if (errors[name as keyof FormErrors]) {
       setErrors((p) => ({ ...p, [name]: undefined }));
     }
@@ -263,8 +281,16 @@ export default function SalaryPage() {
         // If we want instantly to fetch payslips:
         const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
         const payslipListRes = await fetch(`${API_URL}/payslip`);
-        const pListJson = await payslipListRes.json();
-        const createdPayslip = pListJson.data.find((p: any) => p.salaryId === salaryObj.id);
+        
+        let createdPayslip = null;
+        if (payslipListRes.ok) {
+          const pListJson = await payslipListRes.json();
+          const pArr = Array.isArray(pListJson.data) 
+            ? pListJson.data 
+            : (Array.isArray(pListJson) ? pListJson : []);
+          
+          createdPayslip = pArr.find((p: any) => p.salaryId === salaryObj.id);
+        }
         
         setActivePayslip(createdPayslip);
       }
