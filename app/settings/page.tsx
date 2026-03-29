@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import PageContainer from "@/components/layout/PageContainer";
-import { Trash2, Pencil, X, Check, Upload } from "lucide-react";
+import { Trash2, Pencil, X, Check, Upload, Loader2 } from "lucide-react";
+import {
+  getCompany,
+  upsertCompany,
+  getEmployers,
+  createEmployer,
+  deleteEmployer,
+} from "@/lib/api";
 
 /* ── Design tokens (exact match with department + employee pages) ── */
 
@@ -36,7 +43,7 @@ function Field({
 
 /* ── Types ── */
 
-interface CompanySettings {
+interface CompanyForm {
   companyName: string;
   address: string;
   email: string;
@@ -46,43 +53,79 @@ interface CompanySettings {
 interface Employer {
   id: string;
   name: string;
-  address: string;
-  phone: string;
-  lastMonthSalary: string;
+  address: string | null;
+  phone: string | null;
+  _count?: { employees: number };
 }
-
-/* ── Mock data ── */
-
-const MOCK_EMPLOYERS: Employer[] = [
-  { id: "1", name: "Tanveer Rashiwale", address: "Hubli, Karnataka", phone: "+91 98765 43210", lastMonthSalary: "₹ 45,000" },
-  { id: "2", name: "Rajesh Sharma", address: "Surat, Gujarat", phone: "+91 87654 32100", lastMonthSalary: "₹ 38,000" },
-  { id: "3", name: "Priya Mehta", address: "Mumbai, Maharashtra", phone: "+91 76543 21000", lastMonthSalary: "₹ 52,000" },
-];
 
 export default function SettingsPage() {
   /* ── Company state ── */
-  const [company, setCompany] = useState<CompanySettings>({
+  const [company, setCompany] = useState<CompanyForm>({
     companyName: "",
     address: "",
     email: "",
     phone: "",
   });
   const [logoName, setLogoName] = useState<string>("");
+  const [companySaving, setCompanySaving] = useState(false);
   const [companySaved, setCompanySaved] = useState(false);
+  const [companyError, setCompanyError] = useState<string | null>(null);
 
   /* ── Employer state ── */
-  const [employers, setEmployers] = useState<Employer[]>(MOCK_EMPLOYERS);
+  const [employers, setEmployers] = useState<Employer[]>([]);
+  const [employersLoading, setEmployersLoading] = useState(true);
   const [newEmployer, setNewEmployer] = useState({ name: "", address: "", phone: "" });
+  const [employerSubmitting, setEmployerSubmitting] = useState(false);
+  const [employerError, setEmployerError] = useState<string | null>(null);
 
   /* ── Inline edit state ── */
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", address: "", phone: "" });
 
-  /* ── Company handlers ── */
+  /* ══════ LOAD DATA ON MOUNT ══════ */
+
+  const loadCompany = useCallback(async () => {
+    try {
+      const res = await getCompany();
+      if (res.success && res.data) {
+        setCompany({
+          companyName: res.data.name || "",
+          email: res.data.email || "",
+          phone: res.data.phone || "",
+          address: res.data.address || "",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load company", err);
+    }
+  }, []);
+
+  const loadEmployers = useCallback(async () => {
+    try {
+      setEmployersLoading(true);
+      const res = await getEmployers();
+      if (res.success) {
+        setEmployers(res.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load employers", err);
+    } finally {
+      setEmployersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCompany();
+    loadEmployers();
+  }, [loadCompany, loadEmployers]);
+
+  /* ══════ COMPANY HANDLERS ══════ */
+
   function handleCompanyChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
     setCompany((prev) => ({ ...prev, [name]: value }));
     if (companySaved) setCompanySaved(false);
+    if (companyError) setCompanyError(null);
   }
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -90,48 +133,67 @@ export default function SettingsPage() {
     if (file) setLogoName(file.name);
   }
 
-  function handleCompanySave(e: React.FormEvent) {
+  async function handleCompanySave(e: React.FormEvent) {
     e.preventDefault();
-    // UI-only: just flash success
-    setCompanySaved(true);
-    setTimeout(() => setCompanySaved(false), 3000);
+    if (!company.companyName.trim()) {
+      setCompanyError("Company name is required");
+      return;
+    }
+
+    setCompanySaving(true);
+    setCompanyError(null);
+    try {
+      await upsertCompany({
+        name: company.companyName.trim(),
+        email: company.email.trim() || undefined,
+        phone: company.phone.trim() || undefined,
+        address: company.address.trim() || undefined,
+      });
+      setCompanySaved(true);
+      setTimeout(() => setCompanySaved(false), 3000);
+    } catch (err: any) {
+      setCompanyError(err.message || "Failed to save company settings");
+    } finally {
+      setCompanySaving(false);
+    }
   }
 
-  /* ── Employer handlers ── */
-  function handleAddEmployer() {
+  /* ══════ EMPLOYER HANDLERS ══════ */
+
+  async function handleAddEmployer() {
     const trimmedName = newEmployer.name.trim();
     if (!trimmedName) return;
 
-    const employer: Employer = {
-      id: Date.now().toString(),
-      name: trimmedName,
-      address: newEmployer.address.trim(),
-      phone: newEmployer.phone.trim(),
-      lastMonthSalary: "—",
-    };
-    setEmployers((prev) => [employer, ...prev]);
-    setNewEmployer({ name: "", address: "", phone: "" });
+    setEmployerSubmitting(true);
+    setEmployerError(null);
+    try {
+      await createEmployer({
+        name: trimmedName,
+        address: newEmployer.address.trim() || undefined,
+        phone: newEmployer.phone.trim() || undefined,
+      });
+      setNewEmployer({ name: "", address: "", phone: "" });
+      await loadEmployers();
+    } catch (err: any) {
+      setEmployerError(err.message || "Failed to add employer");
+    } finally {
+      setEmployerSubmitting(false);
+    }
   }
 
-  function handleDeleteEmployer(id: string) {
-    setEmployers((prev) => prev.filter((e) => e.id !== id));
+  async function handleDeleteEmployer(id: string) {
+    setEmployerError(null);
+    try {
+      await deleteEmployer(id);
+      await loadEmployers();
+    } catch (err: any) {
+      setEmployerError(err.message || "Failed to delete employer");
+    }
   }
 
   function handleStartEdit(emp: Employer) {
     setEditId(emp.id);
-    setEditForm({ name: emp.name, address: emp.address, phone: emp.phone });
-  }
-
-  function handleSaveEdit(id: string) {
-    setEmployers((prev) =>
-      prev.map((e) =>
-        e.id === id
-          ? { ...e, name: editForm.name.trim(), address: editForm.address.trim(), phone: editForm.phone.trim() }
-          : e
-      )
-    );
-    setEditId(null);
-    setEditForm({ name: "", address: "", phone: "" });
+    setEditForm({ name: emp.name, address: emp.address || "", phone: emp.phone || "" });
   }
 
   function handleCancelEdit() {
@@ -139,7 +201,7 @@ export default function SettingsPage() {
     setEditForm({ name: "", address: "", phone: "" });
   }
 
-  /* ── Render ── */
+  /* ══════ RENDER ══════ */
   return (
     <PageContainer>
 
@@ -152,6 +214,15 @@ export default function SettingsPage() {
       {/* ══════════════════ SECTION 1 — COMPANY SETTINGS ══════════════════ */}
       <section className="mb-10">
         <h2 className="text-base font-semibold text-neutral-700 mb-4">Company Settings</h2>
+
+        {companyError && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <span className="flex-1">{companyError}</span>
+            <button onClick={() => setCompanyError(null)} className="text-red-400 hover:text-red-600">
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleCompanySave}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -220,8 +291,10 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3 mt-6">
             <button
               type="submit"
-              className="h-11 px-6 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all whitespace-nowrap"
+              disabled={companySaving}
+              className="h-11 px-6 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              {companySaving && <Loader2 size={14} className="animate-spin" />}
               Save Company Settings
             </button>
             {companySaved && (
@@ -235,6 +308,15 @@ export default function SettingsPage() {
       <section>
         <h2 className="text-base font-semibold text-neutral-700 mb-4">Employer Management</h2>
 
+        {employerError && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <span className="flex-1">{employerError}</span>
+            <button onClick={() => setEmployerError(null)} className="text-red-400 hover:text-red-600">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* ── Add Employer Form ── */}
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           <div className="flex flex-col gap-1 flex-1">
@@ -246,6 +328,7 @@ export default function SettingsPage() {
               onChange={(e) => setNewEmployer((p) => ({ ...p, name: e.target.value }))}
               placeholder="Full name"
               className={inputClass}
+              disabled={employerSubmitting}
             />
           </div>
           <div className="flex flex-col gap-1 flex-1">
@@ -257,6 +340,7 @@ export default function SettingsPage() {
               onChange={(e) => setNewEmployer((p) => ({ ...p, address: e.target.value }))}
               placeholder="City, State"
               className={inputClass}
+              disabled={employerSubmitting}
             />
           </div>
           <div className="flex flex-col gap-1 flex-1">
@@ -268,15 +352,17 @@ export default function SettingsPage() {
               onChange={(e) => setNewEmployer((p) => ({ ...p, phone: e.target.value }))}
               placeholder="+91 ..."
               className={inputClass}
+              disabled={employerSubmitting}
             />
           </div>
           <div className="flex items-end">
             <button
               type="button"
               onClick={handleAddEmployer}
-              disabled={!newEmployer.name.trim()}
-              className="h-11 px-6 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!newEmployer.name.trim() || employerSubmitting}
+              className="h-11 px-6 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              {employerSubmitting && <Loader2 size={14} className="animate-spin" />}
               Add Employer
             </button>
           </div>
@@ -292,7 +378,12 @@ export default function SettingsPage() {
           </h3>
         </div>
 
-        {employers.length === 0 ? (
+        {employersLoading ? (
+          <div className="flex items-center justify-center py-16 text-neutral-400">
+            <Loader2 size={24} className="animate-spin" />
+            <span className="ml-2 text-sm">Loading…</span>
+          </div>
+        ) : employers.length === 0 ? (
           <div className="text-center py-16 text-neutral-400 text-sm">
             No employers found. Add one above.
           </div>
@@ -311,7 +402,7 @@ export default function SettingsPage() {
                     Phone
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide whitespace-nowrap">
-                    Last Month Salary
+                    Employees
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide whitespace-nowrap">
                     Actions
@@ -347,7 +438,7 @@ export default function SettingsPage() {
                           className={inputClass}
                         />
                       ) : (
-                        emp.address
+                        emp.address || "—"
                       )}
                     </td>
                     <td className="px-4 py-3 text-neutral-600 whitespace-nowrap">
@@ -358,24 +449,16 @@ export default function SettingsPage() {
                           className={inputClass}
                         />
                       ) : (
-                        emp.phone
+                        emp.phone || "—"
                       )}
                     </td>
                     <td className="px-4 py-3 text-neutral-700 font-medium whitespace-nowrap">
-                      {emp.lastMonthSalary}
+                      {emp._count?.employees ?? 0}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {editId === emp.id ? (
                           <>
-                            <button
-                              type="button"
-                              onClick={() => handleSaveEdit(emp.id)}
-                              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-green-200 bg-green-50 text-green-600 text-xs font-semibold hover:bg-green-100 active:scale-[0.98] transition-all"
-                            >
-                              <Check size={13} />
-                              Save
-                            </button>
                             <button
                               type="button"
                               onClick={handleCancelEdit}

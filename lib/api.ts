@@ -178,3 +178,44 @@ export async function createSalary(payload: Record<string, any>) {
   });
 }
 
+// ─── Company API calls (Singleton) ───────────────────────────
+
+export async function getCompany(): Promise<any> {
+  return request("/company");
+}
+
+export async function upsertCompany(payload: {
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  logoUrl?: string;
+}): Promise<any> {
+  return request("/company", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─── Employer API calls ──────────────────────────────────────
+
+export async function getEmployers(page = 1, limit = 50): Promise<any> {
+  return request(`/employers?page=${page}&limit=${limit}`);
+}
+
+export async function createEmployer(payload: {
+  name: string;
+  address?: string;
+  phone?: string;
+}): Promise<any> {
+  return request("/employers", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteEmployer(id: string): Promise<any> {
+  return request(`/employers/${id}`, {
+    method: "DELETE",
+  });
+}
