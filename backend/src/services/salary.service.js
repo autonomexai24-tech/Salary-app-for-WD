@@ -102,7 +102,7 @@ async function createSalary(data) {
     where: { id: salary.id },
     include: {
       employee: true,
-      payslips: true,
+      payslip: true,
     },
   });
 

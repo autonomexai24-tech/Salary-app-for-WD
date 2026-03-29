@@ -428,11 +428,11 @@ export default function SalaryPage() {
       if (res.success) {
         const salaryObj = res.data;
 
-        // The backend now returns payslips[] with the salary response.
+        // The backend now returns payslip (singular) with the salary response.
         // Use it directly instead of a separate GET /payslip call (avoids stale data).
         let createdPayslip = null;
-        if (salaryObj.payslips && salaryObj.payslips.length > 0) {
-          createdPayslip = salaryObj.payslips[0];
+        if (salaryObj.payslip) {
+          createdPayslip = salaryObj.payslip;
         } else {
           // Fallback: fetch payslip list if backend didn't include it
           let baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
