@@ -138,7 +138,12 @@ function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void 
 
   const daysPresent = workingDays - (Number(s.leavesTaken) || 0);
 
-  const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/payslip/${payslip.id}/download`;
+  // Build download URL — ensure /api prefix is always present (mirrors lib/api.ts logic)
+  let dlBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
+  if (!dlBase.endsWith("/api")) {
+    dlBase += "/api";
+  }
+  const downloadUrl = `${dlBase}/payslip/${payslip.id}/download`;
 
   return (
     <div
