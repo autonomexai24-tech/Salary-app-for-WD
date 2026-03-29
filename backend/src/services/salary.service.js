@@ -93,11 +93,20 @@ async function createSalary(data) {
     create: salaryData,
   });
 
-  // 4. Architect rule: Immediately map unalterable payslip identically upon Salary formulation.
+  // 4. Create payslip snapshot immediately
   const payslipService = require("./payslip.service");
   await payslipService.createPayslip(salary.id);
 
-  return salary;
+  // 5. Return salary WITH the linked payslip so frontend can use it immediately
+  const salaryWithPayslip = await prisma.salary.findUnique({
+    where: { id: salary.id },
+    include: {
+      employee: true,
+      payslips: true,
+    },
+  });
+
+  return salaryWithPayslip;
 }
 
 async function getSalaries({ page, limit }) {

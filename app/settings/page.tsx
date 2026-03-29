@@ -7,6 +7,7 @@ import { Trash2, Pencil, X, Check, Upload, Loader2, Eye } from "lucide-react";
 import {
   getCompany,
   upsertCompany,
+  uploadLogo,
   getEmployers,
   updateEmployer,
   deleteEmployer,
@@ -71,6 +72,8 @@ export default function SettingsPage() {
     phone: "",
   });
   const [logoName, setLogoName] = useState<string>("");
+  const [logoUrl, setLogoUrl] = useState<string>("");
+  const [logoUploading, setLogoUploading] = useState(false);
   const [companySaving, setCompanySaving] = useState(false);
   const [companySaved, setCompanySaved] = useState(false);
   const [companyError, setCompanyError] = useState<string | null>(null);
@@ -95,6 +98,10 @@ export default function SettingsPage() {
           phone: res.data.phone || "",
           address: res.data.address || "",
         });
+        if (res.data.logoUrl) {
+          setLogoUrl(res.data.logoUrl);
+          setLogoName("Current logo");
+        }
       }
     } catch (err) {
       console.error("Failed to load company", err);
@@ -129,9 +136,21 @@ export default function SettingsPage() {
     if (companyError) setCompanyError(null);
   }
 
-  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setLogoName(file.name);
+    if (!file) return;
+    setLogoName(file.name);
+    setLogoUploading(true);
+    try {
+      const res = await uploadLogo(file);
+      if (res.success && res.data?.logoUrl) {
+        setLogoUrl(res.data.logoUrl);
+      }
+    } catch (err: any) {
+      setCompanyError(err.message || "Logo upload failed");
+    } finally {
+      setLogoUploading(false);
+    }
   }
 
   async function handleCompanySave(e: React.FormEvent) {
@@ -222,14 +241,27 @@ export default function SettingsPage() {
 
             <Field label="Logo Upload">
               <div className="flex items-center gap-3">
+                {logoUrl && (
+                  <img
+                    src={(() => {
+                      if (logoUrl.startsWith('http')) return logoUrl;
+                      let base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+                      if (base.endsWith('/api')) base = base.slice(0, -4);
+                      return `${base}${logoUrl}`;
+                    })()}
+                    alt="Company Logo"
+                    className="h-11 w-11 rounded-lg border border-neutral-200 object-contain bg-white"
+                  />
+                )}
                 <label className="inline-flex items-center gap-2 h-11 px-4 rounded-lg border border-neutral-200 bg-neutral-50 text-sm text-neutral-600 cursor-pointer hover:bg-neutral-100 transition-all">
                   <Upload size={14} />
-                  <span>{logoName || "Choose file"}</span>
+                  <span>{logoUploading ? "Uploading..." : (logoName || "Choose file")}</span>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleLogoChange}
                     className="hidden"
+                    disabled={logoUploading}
                   />
                 </label>
               </div>

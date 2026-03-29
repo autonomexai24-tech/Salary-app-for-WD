@@ -207,6 +207,27 @@ export async function upsertCompany(payload: {
   });
 }
 
+export async function uploadLogo(file: File): Promise<any> {
+  let baseUrl = API.endsWith('/') ? API.slice(0, -1) : API;
+  if (!baseUrl.endsWith('/api')) {
+    baseUrl += '/api';
+  }
+  const formData = new FormData();
+  formData.append("logo", file);
+
+  const res = await fetch(`${baseUrl}/company/logo`, {
+    method: "POST",
+    body: formData,
+    // No Content-Type header — browser sets multipart boundary automatically
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json?.message || "Logo upload failed");
+  }
+  return json;
+}
+
 // ─── Employer API calls ──────────────────────────────────────
 
 export async function getEmployers(page = 1, limit = 50): Promise<any> {

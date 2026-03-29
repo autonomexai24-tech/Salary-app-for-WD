@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const app = express();
 
 const departmentRoutes = require("./routes/department.routes");
@@ -12,6 +13,9 @@ const errorMiddleware = require("./middlewares/error.middleware");
 // Global Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve uploaded files (logos etc.) as static assets
+app.use("/api/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Route Registration
 app.use("/api/departments", departmentRoutes);

@@ -102,9 +102,48 @@ function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void 
 
   const d = payslip.data || payslip;
   const comp = d.company || {};
-  const att = d.attendance || {};
-  const earn = d.earnings || d.salary || {};
-  const ded = d.deductions || {};
+  const s = d.salary || {}; // flat legacy key
+
+  // ── Backward-compatible attendance: prefer structured, fall back to flat ──
+  const rawAtt = d.attendance || {};
+  const att = {
+    workingDays: rawAtt.workingDays ?? s.workingDays ?? 0,
+    workingHours: rawAtt.workingHours ?? s.workingHours ?? 0,
+    leavesTaken: rawAtt.leavesTaken ?? s.leavesTaken ?? 0,
+    daysPresent: rawAtt.daysPresent ?? ((rawAtt.workingDays ?? s.workingDays ?? 0) - (rawAtt.leavesTaken ?? s.leavesTaken ?? 0)),
+    otHours: rawAtt.otHours ?? s.otHours ?? 0,
+    minusMinutes: rawAtt.minusMinutes ?? s.minusMinutes ?? 0,
+    salaryPerDay: rawAtt.salaryPerDay ?? (s.workingDays ? (s.basicSalary || 0) / s.workingDays : 0),
+    salaryPerHour: rawAtt.salaryPerHour ?? 0,
+  };
+  // Recalculate per-hour if not in snapshot
+  if (!att.salaryPerHour && att.salaryPerDay && att.workingHours) {
+    att.salaryPerHour = att.salaryPerDay / att.workingHours;
+  }
+
+  // ── Backward-compatible earnings ──
+  const rawEarn = d.earnings || {};
+  const earn = {
+    basicSalary: rawEarn.basicSalary ?? s.basicSalary ?? 0,
+    incentive: rawEarn.incentive ?? s.incentive ?? 0,
+    taDa: rawEarn.taDa ?? s.taDa ?? 0,
+    bonus: rawEarn.bonus ?? s.bonus ?? 0,
+    arrears: rawEarn.arrears ?? s.arrears ?? 0,
+    otPay: rawEarn.otPay ?? s.otPay ?? 0,
+  };
+
+  // ── Backward-compatible deductions ──
+  const rawDed = d.deductions || {};
+  const ded = {
+    professionalTax: rawDed.professionalTax ?? s.professionalTax ?? 0,
+    advanceTaken: rawDed.advanceTaken ?? s.advanceTaken ?? 0,
+    advanceDeducted: rawDed.advanceDeducted ?? s.advanceDeducted ?? 0,
+    extraFine: rawDed.extraFine ?? s.extraFine ?? 0,
+    leavePenalty: rawDed.leavePenalty ?? s.leavePenalty ?? 0,
+    timePenalty: rawDed.timePenalty ?? s.timePenalty ?? 0,
+    emi: rawDed.emi ?? s.emi ?? 0,
+  };
+
   const t = d.totals || {};
 
   const fmt = (v: any) => Math.round(Number(v) || 0).toLocaleString("en-IN");
@@ -151,9 +190,22 @@ function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void 
           {/* ═══ SECTION 1: COMPANY HEADER BAND ═══ */}
           <div className="bg-indigo-900 px-6 py-5 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-lg bg-white flex items-center justify-center text-[10px] text-gray-400 font-bold border border-gray-200">
-                LOGO
-              </div>
+              {comp.logoUrl ? (
+                <img
+                  src={(() => {
+                    if (comp.logoUrl.startsWith('http')) return comp.logoUrl;
+                    let base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+                    if (base.endsWith('/api')) base = base.slice(0, -4);
+                    return `${base}${comp.logoUrl}`;
+                  })()}
+                  alt="Logo"
+                  className="w-14 h-14 rounded-lg object-contain bg-white border border-gray-200"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-lg bg-white flex items-center justify-center text-[10px] text-gray-400 font-bold border border-gray-200">
+                  LOGO
+                </div>
+              )}
               <div>
                 <h2 className="text-xl font-bold text-white">{comp.name || "Web Dreams"}</h2>
                 <p className="text-xs text-blue-200 italic">the WWW dream comes true...</p>
@@ -375,25 +427,24 @@ export default function SalaryPage() {
       const res: any = await createSalary(form);
       if (res.success) {
         const salaryObj = res.data;
-        
-        // Build base URL consistently — mirror the logic in lib/api.ts
-        let baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
-        if (!baseUrl.endsWith("/api")) {
-          baseUrl += "/api";
-        }
-        
-        const payslipListRes = await fetch(`${baseUrl}/payslip`);
-        
+
+        // The backend now returns payslips[] with the salary response.
+        // Use it directly instead of a separate GET /payslip call (avoids stale data).
         let createdPayslip = null;
-        if (payslipListRes.ok) {
-          const pListJson = await payslipListRes.json();
-          const pArr = Array.isArray(pListJson.data) 
-            ? pListJson.data 
-            : (Array.isArray(pListJson) ? pListJson : []);
-          
-          createdPayslip = pArr.find((p: any) => p.salaryId === salaryObj.id);
+        if (salaryObj.payslips && salaryObj.payslips.length > 0) {
+          createdPayslip = salaryObj.payslips[0];
+        } else {
+          // Fallback: fetch payslip list if backend didn't include it
+          let baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
+          if (!baseUrl.endsWith("/api")) baseUrl += "/api";
+          const payslipListRes = await fetch(`${baseUrl}/payslip`);
+          if (payslipListRes.ok) {
+            const pListJson = await payslipListRes.json();
+            const pArr = Array.isArray(pListJson.data) ? pListJson.data : (Array.isArray(pListJson) ? pListJson : []);
+            createdPayslip = pArr.find((p: any) => p.salaryId === salaryObj.id);
+          }
         }
-        
+
         setActivePayslip(createdPayslip);
       } else {
         setErrors({ api: res.message || "Failed to generate payslip." });
