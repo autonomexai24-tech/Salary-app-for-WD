@@ -53,12 +53,29 @@ async function createSalary(data) {
   // 8. Net Salary
   const netSalary = grossSalary - totalDeduction;
 
-  // 3. Save or Update all evaluated parameters permanently as a snapshot
+  // 3. Save or Update — explicitly list ONLY schema-valid columns to avoid Prisma Unknown arg errors.
   const salaryData = {
-    ...data,
+    employeeId: data.employeeId,
+    month: data.month,
+    year: data.year,
+    workingDays,
+    workingHours,
+    basicSalary,
+    incentive,
+    bonus,
+    taDa,
+    arrears,
+    otHours,
     otPay,
+    leavesTaken,
     leavePenalty,
+    minusMinutes,
     timePenalty,
+    extraFine,
+    professionalTax,
+    emi,
+    advanceTaken,
+    advanceDeducted,
     grossSalary,
     totalDeduction,
     netSalary,

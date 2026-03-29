@@ -178,6 +178,8 @@ export async function createSalary(payload: Record<string, any>) {
     emi: Number(payload.emi) || 0,
     advanceTaken: Number(payload.advanceTaken) || 0,
     advanceDeducted: Number(payload.advanceDeducted) || 0,
+    additionalAdvance: Number(payload.additionalAdvance) || 0,
+    advanceRemaining: Number(payload.advanceRemaining) || 0,
   };
 
   return request("/salary", {

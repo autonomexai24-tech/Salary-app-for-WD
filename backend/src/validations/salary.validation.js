@@ -6,8 +6,8 @@ const createSalarySchema = z.object({
   month: z.number().int().min(1).max(12),
   year: z.number().int().min(2000),
   
-  workingDays: z.number().int().min(1),
-  workingHours: z.number().int().min(1),
+  workingDays: z.number().int().min(0),
+  workingHours: z.number().int().min(0),
   
   basicSalary: z.number().min(0),
   
@@ -29,6 +29,10 @@ const createSalarySchema = z.object({
   
   advanceTaken: z.number().min(0).optional().nullable(),
   advanceDeducted: z.number().min(0).optional().nullable(),
+  
+  // These frontend-only fields pass through validation but are NOT stored in Salary model
+  additionalAdvance: z.number().min(0).optional().nullable(),
+  advanceRemaining: z.number().min(0).optional().nullable(),
 });
 
 module.exports = {

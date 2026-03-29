@@ -332,17 +332,17 @@ export default function SalaryPage() {
 
     setSubmitting(true);
     try {
-      const res = await createSalary(form);
+      const res: any = await createSalary(form);
       if (res.success) {
-        // Backend now returns { success: true, data: salary_with_payslip } natively
         const salaryObj = res.data;
-        // Fetch payslip automatically using the logic linked if needed, or if UI is configured, it auto hooks.
-        // Usually, to immediately render mapping, we must fetch the specific payslip!
         
-        // Wait, the API creates the payslip in the backend via await payslipService.createPayslip(salary.id).
-        // If we want instantly to fetch payslips:
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-        const payslipListRes = await fetch(`${API_URL}/payslip`);
+        // Build base URL consistently — mirror the logic in lib/api.ts
+        let baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
+        if (!baseUrl.endsWith("/api")) {
+          baseUrl += "/api";
+        }
+        
+        const payslipListRes = await fetch(`${baseUrl}/payslip`);
         
         let createdPayslip = null;
         if (payslipListRes.ok) {
@@ -355,9 +355,11 @@ export default function SalaryPage() {
         }
         
         setActivePayslip(createdPayslip);
+      } else {
+        setErrors({ api: res.message || "Failed to generate payslip." });
       }
     } catch (err: any) {
-      setErrors({ api: err.message || "Duplicate or failed to calculate salary." });
+      setErrors({ api: err.message || "Failed to calculate salary." });
     } finally {
       setSubmitting(false);
     }
