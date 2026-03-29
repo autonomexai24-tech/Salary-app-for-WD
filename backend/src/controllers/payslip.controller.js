@@ -13,8 +13,8 @@ async function createPayslip(req, res, next) {
 
 async function getPayslips(req, res, next) {
   try {
-    const { prisma } = require("../utils/prisma"); // wait, best strictly use service layer, but quick fetching
-    const payslips = await require("../utils/prisma").payslip.findMany({
+    const prisma = require("../utils/prisma");
+    const payslips = await prisma.payslip.findMany({
       orderBy: { createdAt: "desc" },
     });
     return res.status(200).json({ success: true, data: payslips });

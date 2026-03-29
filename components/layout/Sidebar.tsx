@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Building2, IndianRupee } from "lucide-react";
+import { Users, Building2, IndianRupee, Settings } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { label: "Employee", href: "/employee", icon: <Users size={20} /> },
   { label: "Department", href: "/department", icon: <Building2 size={20} /> },
   { label: "Salary", href: "/salary", icon: <IndianRupee size={20} /> },
+  { label: "Settings", href: "/settings", icon: <Settings size={20} /> },
 ];
 
 export default function Sidebar() {
