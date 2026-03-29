@@ -5,22 +5,7 @@ const prisma = require("../utils/prisma");
  */
 
 async function createSalary(data) {
-  // 1. Check duplicate preventing overlapping records natively matching DB unique constraint
-  const duplicate = await prisma.salary.findUnique({
-    where: {
-      employeeId_month_year: {
-        employeeId: data.employeeId,
-        month: data.month,
-        year: data.year,
-      },
-    },
-  });
-
-  if (duplicate) {
-    const error = new Error("Salary entry already exists for this employee for this month/year");
-    error.statusCode = 400;
-    throw error;
-  }
+  // 1. We no longer block duplicates. We will gracefully upsert (overwrite) them at the end.
 
   // 2. Perform rigorous internal algorithmic calculations
   const toNumber = (v) => Number(v) || 0;
@@ -68,17 +53,27 @@ async function createSalary(data) {
   // 8. Net Salary
   const netSalary = grossSalary - totalDeduction;
 
-  // 3. Save all evaluated parameters permanently as a snapshot
-  const salary = await prisma.salary.create({
-    data: {
-      ...data,
-      otPay,
-      leavePenalty,
-      timePenalty,
-      grossSalary,
-      totalDeduction,
-      netSalary,
+  // 3. Save or Update all evaluated parameters permanently as a snapshot
+  const salaryData = {
+    ...data,
+    otPay,
+    leavePenalty,
+    timePenalty,
+    grossSalary,
+    totalDeduction,
+    netSalary,
+  };
+
+  const salary = await prisma.salary.upsert({
+    where: {
+      employeeId_month_year: {
+        employeeId: data.employeeId,
+        month: data.month,
+        year: data.year,
+      },
     },
+    update: salaryData,
+    create: salaryData,
   });
 
   // 4. Architect rule: Immediately map unalterable payslip identically upon Salary formulation.

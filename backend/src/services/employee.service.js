@@ -171,6 +171,13 @@ async function deleteEmployee(id) {
     where: { id },
   });
 
+  // Dynamically purge the mapping "Employer" string object to keep the Settings View clean.
+  if (employee.employerId) {
+    await prisma.employer.deleteMany({
+      where: { id: employee.employerId },
+    });
+  }
+
   return deleted;
 }
 

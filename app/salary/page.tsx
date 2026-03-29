@@ -44,8 +44,18 @@ interface FormErrors {
 }
 
 const MONTHS = [
-  "1","2","3","4","5","6",
-  "7","8","9","10","11","12",
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
 ];
 
 const YEARS = ["2022","2023","2024","2025","2026"];
@@ -135,184 +145,105 @@ function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-slate-50 w-full max-w-5xl max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-slate-50 w-full max-w-6xl max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* HEADER SECTION */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 py-5 bg-white border-b border-slate-200">
+        <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 flex border rounded-lg items-center justify-center bg-blue-50 border-blue-100 text-blue-600">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-800 tracking-tight">Salary Slip Preview</h2>
-              <p className="text-sm font-medium text-slate-500 mt-0.5 flex items-center gap-1.5">
-                <CalendarDays className="w-3.5 h-3.5" />
-                {d.month} {d.year}
-              </p>
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Payslip Generated Preview</h2>
             </div>
-          </div>
-          
-          <div className="mt-4 sm:mt-0 flex gap-2">
-            <Badge variant="outline" className="bg-white px-3 py-1.5 text-xs text-slate-700">
-              <span className="text-slate-500 mr-2">Total Days</span>
-              <span className="font-bold">{workingDays}</span>
-            </Badge>
-            <Badge variant="outline" className="bg-white px-3 py-1.5 text-xs text-slate-700">
-              <span className="text-slate-500 mr-2">Present</span>
-              <span className="font-bold text-green-600">{daysPresent}</span>
-            </Badge>
-            <Badge variant="outline" className="bg-white px-3 py-1.5 text-xs text-slate-700">
-              <span className="text-slate-500 mr-2">Leaves</span>
-              <span className="font-bold text-red-500">{s.leavesTaken || 0}</span>
-            </Badge>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-auto p-6 bg-slate-100/50">
           
-          {/* EMPLOYEE INFO */}
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="py-3 px-4 border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="text-xs text-slate-500 uppercase tracking-wider">Employee Information</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-y-4 gap-x-6">
-              <div>
-                <p className="text-xs font-medium text-slate-500 mb-1">Full Name</p>
-                <p className="text-sm font-semibold text-slate-900">{d.employeeName || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 mb-1">Employee ID</p>
-                <p className="text-sm font-semibold text-slate-900">{d.employeeId ? `#${d.employeeId}` : "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 mb-1">Designation</p>
-                <p className="text-sm font-semibold text-slate-900">{d.position || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 mb-1">Department</p>
-                <p className="text-sm font-semibold text-slate-900">{d.department || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 mb-1">Email</p>
-                <p className="text-sm font-semibold text-slate-900 truncate">{d.email || "N/A"}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* FINANCIAL SUMMARY DASHBOARD */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="p-5">
-                <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Gross Salary</p>
-                <p className="text-xl font-bold text-slate-800">₹ {Number(displayGross).toLocaleString('en-IN')}</p>
-              </CardContent>
-            </Card>
+          {/* THE PHYSICAL PAYSLIP MOCK */}
+          <div className="min-w-[1000px] border border-slate-300 bg-white p-8 shadow-sm mx-auto">
             
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="p-5">
-                <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Salary Breakdown</p>
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Per Month</span>
-                    <span className="font-semibold text-slate-700">₹ {Number(basicSalary).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Per Day</span>
-                    <span className="font-semibold text-slate-700">₹ {perDay}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Per Hour</span>
-                    <span className="font-semibold text-slate-700">₹ {perHour}</span>
-                  </div>
+            {/* Header */}
+            <div className="flex justify-between items-start mb-8">
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-slate-900">Employee Name:<span className="font-normal ml-1">{d.employeeName}</span></p>
+                <p className="text-sm font-bold text-slate-900">Employee ID:<span className="font-normal ml-1">{d.employeeEmail || `${(d.employeeName || "").replace(/\s+/g,"")}@gmail.com`}</span></p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-slate-900">Position:<span className="font-normal ml-1">{d.position}</span></p>
+                <p className="text-sm font-bold text-slate-900">Payslip For:<span className="font-normal ml-1">
+                  {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][parseInt(d.month)-1] || d.month} / {d.year}
+                </span></p>
+              </div>
+              <div className="text-right">
+                <h2 className="text-2xl font-black text-orange-500 tracking-tight">{d.company?.name || "Web Dreams"}</h2>
+                <p className="text-xs italic text-slate-500 font-medium">the WWW dream comes true...</p>
+              </div>
+            </div>
+
+            {/* Main Table */}
+            <table className="w-full border-collapse border border-slate-300 text-xs mb-4">
+              <thead>
+                <tr className="border-b border-slate-300">
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">Basic</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">Incentives</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">Bonus</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">TA/DA</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">Arrears</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Prof.tax</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Adv. pay</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Addition. adv</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Adv deducted</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Extra fine</th>
+                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Leave penalty</th>
+                  <th className="p-2 text-left font-semibold text-red-700">Time penalty</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.basicSalary || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.incentive || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.bonus || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.taDa || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.arrears || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.professionalTax || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.advanceTaken || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.additionalAdvance || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.advanceDeducted || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.extraFine || 0)}</td>
+                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.leavePenalty || 0)}</td>
+                  <td className="p-2 font-medium">{Math.round(s.timePenalty || 0)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Totals & Signature */}
+            <div className="flex justify-between items-start mt-6">
+              <div className="flex gap-10">
+                <div>
+                  <p className="text-sm font-bold text-slate-800 mb-1">Gross</p>
+                  <p className="text-sm font-medium">{Math.round(t.gross || 0)}</p>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="p-5">
-                <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Total Deductions</p>
-                <p className="text-xl font-bold text-red-500">₹ {Number(displayDeductionsStr).toLocaleString('en-IN')}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-green-200 bg-green-50 shadow-sm">
-              <CardContent className="p-5 flex flex-col justify-center h-full">
-                <p className="text-xs font-bold text-green-700 mb-1 uppercase tracking-wider">Net Salary</p>
-                <p className="text-3xl font-black text-green-600 drop-shadow-sm">₹ {Number(displayNetStr).toLocaleString('en-IN')}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* EARNINGS & DEDUCTIONS TABLES */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            
-            {/* Earnings */}
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="bg-slate-100/80 px-4 py-3 border-b border-slate-200">
-                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Banknote className="w-4 h-4 text-slate-500" /> Earnings
-                </h4>
+                <div>
+                  <p className="text-sm font-bold text-slate-800 mb-1">Deduction</p>
+                  <p className="text-sm font-medium">{Math.round(t.deduction || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800 mb-1">Net salary</p>
+                  <p className="text-sm font-medium">{Math.round(t.net || 0)}/-</p>
+                </div>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="w-[60%] font-semibold text-slate-500 h-9">Description</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-500 h-9">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium py-2.5">Basic Salary</TableCell>
-                    <TableCell className="text-right py-2.5">₹ {basicSalary}</TableCell>
-                  </TableRow>
-                  {Number(s.incentive) > 0 && <TableRow><TableCell className="font-medium py-2.5">Incentives</TableCell><TableCell className="text-right py-2.5">₹ {s.incentive}</TableCell></TableRow>}
-                  {Number(s.taDa) > 0 && <TableRow><TableCell className="font-medium py-2.5">TA/DA</TableCell><TableCell className="text-right py-2.5">₹ {s.taDa}</TableCell></TableRow>}
-                  {Number(s.arrears) > 0 && <TableRow><TableCell className="font-medium py-2.5">Arrears</TableCell><TableCell className="text-right py-2.5">₹ {s.arrears}</TableCell></TableRow>}
-                  {Number(s.bonus) > 0 && <TableRow><TableCell className="font-medium py-2.5">Bonus</TableCell><TableCell className="text-right py-2.5">₹ {s.bonus}</TableCell></TableRow>}
-                </TableBody>
-              </Table>
-              <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex justify-between items-center">
-                <span className="text-sm font-semibold text-slate-600">Total Earnings</span>
-                <span className="text-sm font-bold text-slate-900">₹ {Number(displayGross).toLocaleString('en-IN')}</span>
+              
+              <div className="text-center mt-2">
+                <p className="text-sm font-bold text-slate-800 mb-8">signature of proprietor</p>
+                <p className="text-xs text-slate-600 max-w-xs mx-auto">
+                  {d.company?.address || "#51-B, Behind Mahaveer school, Bailappanavar nagar, Hubli-29"}
+                </p>
               </div>
             </div>
 
-            {/* Deductions */}
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="bg-slate-100/80 px-4 py-3 border-b border-slate-200">
-                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-slate-500" /> Deductions
-                </h4>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="w-[60%] font-semibold text-slate-500 h-9">Description</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-500 h-9">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Number(s.professionalTax) > 0 && <TableRow><TableCell className="font-medium py-2.5">Professional Tax</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.professionalTax}</TableCell></TableRow>}
-                  {Number(s.advanceTaken) > 0 && <TableRow><TableCell className="font-medium py-2.5">Advance</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.advanceTaken}</TableCell></TableRow>}
-                  {Number(s.advanceDeducted) > 0 && <TableRow><TableCell className="font-medium py-2.5">Advance Deducted</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.advanceDeducted}</TableCell></TableRow>}
-                  {Number(s.extraFine) > 0 && <TableRow><TableCell className="font-medium py-2.5">Fine / Penalty</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.extraFine}</TableCell></TableRow>}
-                  {Number(s.emi) > 0 && <TableRow><TableCell className="font-medium py-2.5">EMI</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.emi}</TableCell></TableRow>}
-                  {Number(s.minusMinutes) > 0 && <TableRow><TableCell className="font-medium py-2.5">Time Penalty / Late Arrival</TableCell><TableCell className="text-right py-2.5 text-red-600">₹ {s.minusMinutes}</TableCell></TableRow>}
-                  {totalDeductions === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={2} className="h-14 text-center text-slate-400 italic">No deductions applied</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex justify-between items-center">
-                <span className="text-sm font-semibold text-slate-600">Total Deductions</span>
-                <span className="text-sm font-bold text-red-600">₹ {Number(displayDeductionsStr).toLocaleString('en-IN')}</span>
-              </div>
-            </div>
-            
           </div>
-
         </div>
 
         {/* FOOTER & ACTIONS */}
@@ -561,7 +492,7 @@ export default function SalaryPage() {
               <select name="month" value={form.month} onChange={handleChange}
                 className={errors.month ? selectErrCls : selectCls}>
                 <option value="">Select month</option>
-                {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
+                {MONTHS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
               <ErrorMsg msg={errors.month} />
             </div>
