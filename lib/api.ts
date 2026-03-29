@@ -140,3 +140,41 @@ export async function createEmployee(payload: Record<string, any>) {
     body: JSON.stringify(data),
   });
 }
+
+export async function getEmployees(
+  page = 1,
+  limit = 100
+): Promise<any> {
+  return request(`/employees?page=${page}&limit=${limit}`);
+}
+
+// ─── Salary API calls ────────────────────────────────────────
+
+export async function createSalary(payload: Record<string, any>) {
+  const data = {
+    employeeId: payload.employees,
+    month: Number(payload.month),
+    year: Number(payload.year),
+    workingDays: Number(payload.workingDays) || 0,
+    workingHours: Number(payload.workingHours) || 0,
+    basicSalary: Number(payload.basicSalary) || 0,
+    incentive: Number(payload.incentive) || 0,
+    bonus: Number(payload.bonus) || 0,
+    taDa: Number(payload.tada) || 0,
+    arrears: Number(payload.arrears) || 0,
+    otHours: Number(payload.otHours) || 0,
+    leavesTaken: Number(payload.leavesTaken) || 0,
+    minusMinutes: Number(payload.minusMinutesRupees) || 0,
+    extraFine: Number(payload.extraFine) || 0,
+    professionalTax: Number(payload.professionalTax) || 0,
+    emi: Number(payload.emi) || 0,
+    advanceTaken: Number(payload.advanceTaken) || 0,
+    advanceDeducted: Number(payload.advanceDeducted) || 0,
+  };
+
+  return request("/salary", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
