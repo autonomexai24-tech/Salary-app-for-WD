@@ -23,30 +23,49 @@ async function createSalary(data) {
   }
 
   // 2. Perform rigorous internal algorithmic calculations
-  const salaryPerDay = data.basicSalary / data.workingDays;
-  const salaryPerHour = data.basicSalary / data.workingHours;
+  const toNumber = (v) => Number(v) || 0;
 
-  const otPay = (data.otHours || 0) * salaryPerHour;
+  const basicSalary = toNumber(data.basicSalary);
+  const incentive = toNumber(data.incentive);
+  const bonus = toNumber(data.bonus);
+  const taDa = toNumber(data.taDa);
+  const arrears = toNumber(data.arrears);
 
-  const grossSalary =
-    data.basicSalary +
-    (data.incentive || 0) +
-    (data.bonus || 0) +
-    (data.taDa || 0) +
-    (data.arrears || 0) +
-    otPay;
+  const leavesTaken = toNumber(data.leavesTaken);
+  const workingDays = toNumber(data.workingDays);
+  const workingHours = toNumber(data.workingHours || 8);
+  const otHours = toNumber(data.otHours);
 
-  const leavePenalty = (data.leavesTaken || 0) * salaryPerDay;
+  const advanceTaken = toNumber(data.advanceTaken);
+  const advanceDeducted = toNumber(data.advanceDeducted);
+  const additionalAdvance = toNumber(data.additionalAdvance);
+  const extraFine = toNumber(data.extraFine);
+  const professionalTax = toNumber(data.professionalTax);
+  const emi = toNumber(data.emi);
+  const minusMinutes = toNumber(data.minusMinutes);
 
-  const timePenalty = (data.minusMinutes || 0) + (data.extraFine || 0);
+  // 1. Salary per day
+  const salaryPerDay = workingDays ? basicSalary / workingDays : 0;
 
-  const totalDeduction =
-    leavePenalty +
-    timePenalty +
-    (data.advanceDeducted || 0) +
-    (data.professionalTax || 0) +
-    (data.emi || 0);
+  // 2. Salary per hour
+  const salaryPerHour = workingHours ? salaryPerDay / workingHours : 0;
 
+  // 3. OT Pay
+  const otPay = salaryPerHour * otHours;
+
+  // 4. Gross Salary
+  const grossSalary = basicSalary + incentive + bonus + taDa + arrears + otPay;
+
+  // 5. Leave Penalty
+  const leavePenalty = leavesTaken * salaryPerDay;
+
+  // 6. Time Penalty
+  const timePenalty = (minusMinutes / 60) * salaryPerHour;
+
+  // 7. Total Deduction
+  const totalDeduction = professionalTax + advanceDeducted + extraFine + leavePenalty + timePenalty + emi;
+
+  // 8. Net Salary
   const netSalary = grossSalary - totalDeduction;
 
   // 3. Save all evaluated parameters permanently as a snapshot
