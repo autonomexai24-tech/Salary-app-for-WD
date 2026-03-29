@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
-import { Trash2, Pencil, X, Check, Upload, Loader2 } from "lucide-react";
+import { Trash2, Pencil, X, Check, Upload, Loader2, Eye } from "lucide-react";
 import {
   getCompany,
   upsertCompany,
@@ -56,9 +57,12 @@ interface Employer {
   address: string | null;
   phone: string | null;
   _count?: { employees: number };
+  employees?: any[];
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
+
   /* ── Company state ── */
   const [company, setCompany] = useState<CompanyForm>({
     companyName: "",
@@ -76,9 +80,8 @@ export default function SettingsPage() {
   const [employersLoading, setEmployersLoading] = useState(true);
   const [employerError, setEmployerError] = useState<string | null>(null);
 
-  /* ── Inline edit state ── */
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", address: "", phone: "" });
+  /* ── View Modal state ── */
+  const [viewEmployer, setViewEmployer] = useState<Employer | null>(null);
 
   /* ══════ LOAD DATA ON MOUNT ══════ */
 
@@ -167,33 +170,6 @@ export default function SettingsPage() {
       await loadEmployers();
     } catch (err: any) {
       setEmployerError(err.message || "Failed to delete employer");
-    }
-  }
-
-  function handleStartEdit(emp: Employer) {
-    setEditId(emp.id);
-    setEditForm({ name: emp.name, address: emp.address || "", phone: emp.phone || "" });
-  }
-
-  function handleCancelEdit() {
-    setEditId(null);
-    setEditForm({ name: "", address: "", phone: "" });
-  }
-
-  async function handleSaveEdit() {
-    if (!editId || !editForm.name.trim()) return;
-    setEmployerError(null);
-    try {
-      await updateEmployer(editId, {
-        name: editForm.name.trim(),
-        address: editForm.address.trim() || undefined,
-        phone: editForm.phone.trim() || undefined,
-      });
-      setEditId(null);
-      setEditForm({ name: "", address: "", phone: "" });
-      await loadEmployers();
-    } catch (err: any) {
-      setEmployerError(err.message || "Failed to update employer");
     }
   }
 
@@ -355,83 +331,50 @@ export default function SettingsPage() {
                     ].join(" ")}
                   >
                     <td className="px-4 py-3 text-neutral-800 font-medium">
-                      {editId === emp.id ? (
-                        <input
-                          value={editForm.name}
-                          onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
-                          className={inputClass}
-                          autoFocus
-                        />
-                      ) : (
-                        emp.name
-                      )}
+                      {emp.name}
                     </td>
                     <td className="px-4 py-3 text-neutral-600">
-                      {editId === emp.id ? (
-                        <input
-                          value={editForm.address}
-                          onChange={(e) => setEditForm((p) => ({ ...p, address: e.target.value }))}
-                          className={inputClass}
-                        />
-                      ) : (
-                        emp.address || "—"
-                      )}
+                      {emp.address || "—"}
                     </td>
                     <td className="px-4 py-3 text-neutral-600 whitespace-nowrap">
-                      {editId === emp.id ? (
-                        <input
-                          value={editForm.phone}
-                          onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))}
-                          className={inputClass}
-                        />
-                      ) : (
-                        emp.phone || "—"
-                      )}
+                      {emp.phone || "—"}
                     </td>
                     <td className="px-4 py-3 text-neutral-700 font-medium whitespace-nowrap">
                       {emp._count?.employees ?? 0}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        {editId === emp.id ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={handleSaveEdit}
-                              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100 active:scale-[0.98] transition-all"
-                            >
-                              <Check size={13} />
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleCancelEdit}
-                              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-600 text-xs font-semibold hover:bg-neutral-100 active:scale-[0.98] transition-all"
-                            >
-                              <X size={13} />
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteEmployer(emp.id)}
-                              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-red-200 bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 active:scale-[0.98] transition-all"
-                            >
-                              <Trash2 size={13} />
-                              Delete
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(emp)}
-                              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-blue-200 bg-blue-50 text-blue-600 text-xs font-semibold hover:bg-blue-100 active:scale-[0.98] transition-all"
-                            >
-                              <Pencil size={13} />
-                              Edit
-                            </button>
-                          </>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => setViewEmployer(emp)}
+                          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-neutral-200 bg-white text-neutral-600 text-xs font-semibold hover:bg-neutral-50 active:scale-[0.98] transition-all"
+                        >
+                          <Eye size={13} className="text-neutral-500" />
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const employeeId = emp.employees?.[0]?.id;
+                            if (employeeId) {
+                              router.push(`/employee?edit=${employeeId}`);
+                            } else {
+                              alert("No linked employee found to edit.");
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-blue-200 bg-blue-50 text-blue-600 text-xs font-semibold hover:bg-blue-100 active:scale-[0.98] transition-all"
+                        >
+                          <Pencil size={13} />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEmployer(emp.id)}
+                          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-red-200 bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 active:scale-[0.98] transition-all"
+                        >
+                          <Trash2 size={13} />
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -441,6 +384,121 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      {/* ══════════════════ MODAL — VIEW EMPLOYEE ══════════════════ */}
+      {viewEmployer && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50/50">
+              <h3 className="text-lg font-bold text-neutral-800">
+                Employee Details
+              </h3>
+              <button
+                onClick={() => setViewEmployer(null)}
+                className="p-2 -mr-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              {viewEmployer.employees?.[0] ? (
+                (() => {
+                  const empData = viewEmployer.employees[0];
+                  return (
+                    <div className="grid grid-cols-2 gap-y-6 gap-x-8">
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                          Full Name
+                        </p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          {empData.firstName} {empData.lastName}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                          Department
+                        </p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          {empData.department?.name || "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                          Salary
+                        </p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          ₹{empData.salary.toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                          Previous Salary
+                        </p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          {empData.previousSalary
+                            ? `₹${empData.previousSalary.toLocaleString()}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                          Phone
+                        </p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          {empData.phone || "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                          Date of Birth
+                        </p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          {empData.dateOfBirth
+                            ? new Date(empData.dateOfBirth).toLocaleDateString()
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                          Gender & Qualification
+                        </p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          {empData.gender || "—"} • {empData.qualification || "—"}
+                        </p>
+                      </div>
+                      <div className="col-span-2 mt-2">
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                          Address
+                        </p>
+                        <p className="text-sm font-medium text-neutral-900 bg-neutral-50 p-3 rounded-lg border border-neutral-100">
+                          {empData.address || "No address provided."}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="py-8 text-center text-neutral-500 text-sm">
+                  No comprehensive employee record available for this entry.
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex justify-end">
+              <button
+                onClick={() => setViewEmployer(null)}
+                className="h-10 px-5 rounded-lg bg-white border border-neutral-200 text-neutral-700 text-sm font-semibold hover:bg-neutral-50 active:scale-[0.98] transition-all"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </PageContainer>
   );
