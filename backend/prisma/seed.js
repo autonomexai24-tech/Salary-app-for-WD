@@ -12,7 +12,7 @@ async function main() {
   const employerPassword = await bcrypt.hash("pass123", salt);
   await prisma.user.upsert({
     where: { userId: "EMP-2024" },
-    update: { password: employerPassword },
+    update: { password: employerPassword, name: "Employer User", role: "EMPLOYER" },
     create: {
       userId: "EMP-2024",
       password: employerPassword,
@@ -26,7 +26,7 @@ async function main() {
   const adminPassword = await bcrypt.hash("admin@99", salt);
   await prisma.user.upsert({
     where: { userId: "ADM-ROOT" },
-    update: { password: adminPassword },
+    update: { password: adminPassword, name: "Admin User", role: "ADMIN" },
     create: {
       userId: "ADM-ROOT",
       password: adminPassword,
@@ -36,13 +36,17 @@ async function main() {
   });
   console.log("  ✅ Admin:    ADM-ROOT / admin@99");
 
+  // Verify users exist
+  const count = await prisma.user.count();
+  console.log(`  📊 Total users in database: ${count}`);
   console.log("🎉 Seeding complete!");
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Seed failed:", e);
-    process.exit(1);
+    console.error("❌ Seed failed:", e.message || e);
+    // Don't exit with code 1 — let the server start anyway
+    // process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
