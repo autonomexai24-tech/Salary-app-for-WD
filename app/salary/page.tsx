@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import { getEmployees, createSalary } from "@/lib/api";
 
 interface SalaryForm {
   employees: string;
@@ -33,19 +34,12 @@ interface FormErrors {
   employees?: string;
   month?: string;
   year?: string;
+  api?: string;
 }
 
-const EMPLOYEES = [
-  "Rajesh Sharma",
-  "Priya Mehta",
-  "Amit Verma",
-  "Sunita Patel",
-  "Vikram Singh",
-];
-
 const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
+  "1","2","3","4","5","6",
+  "7","8","9","10","11","12",
 ];
 
 const YEARS = ["2022","2023","2024","2025","2026"];
@@ -90,24 +84,28 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 const PAYSLIP_COLS = [
   "Basic","Incentives","Bonus","TA/DA","Arrears",
   "Prof.tax","Adv.pay","Addition adv","Adv deducted",
-  "Adv remaining","Extra fine","Leave penalty","Time penalty",
-];
-const PAYSLIP_VALS = [
-  "19000","0","0","0","0",
-  "200","0","0","0",
-  "0","210","3167","5526",
+  "Extra fine","Leave penalty","Time penalty",
 ];
 
-function PayslipModal({ onClose }: { onClose: () => void }) {
+function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void }) {
+  if (!payslip) return null;
+
+  const d = payslip.data;
+  const s = d.salary;
+  const t = d.totals;
+
+  const PAYSLIP_VALS = [
+    String(s.basicSalary), String(s.incentive), String(s.bonus), String(s.taDa), String(s.arrears),
+    String(s.professionalTax), String(s.advanceTaken), "0", String(s.advanceDeducted),
+    "0", "0", "0",
+  ];
+
   return (
-    /* backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden">
-
-        {/* modal header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
           <h2 className="text-base font-bold text-neutral-800">Payslip</h2>
           <button
@@ -120,25 +118,20 @@ function PayslipModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[80vh]">
-
           {/* ── TOP SECTION ── */}
           <div className="flex items-start justify-between gap-4 mb-6">
-
-            {/* left — employee info */}
             <div className="space-y-1">
               <p className="text-xs text-neutral-400 uppercase tracking-wide font-semibold">Employee Name</p>
-              <p className="text-sm font-bold text-neutral-800">mohammed tanveer rashiwale</p>
-              <p className="text-xs text-neutral-500 mt-2">mohammedtanveerrashiwale3@gmail.com</p>
+              <p className="text-sm font-bold text-neutral-800">{d.employeeName}</p>
+              <p className="text-xs text-neutral-500 mt-2">{d.email}</p>
             </div>
 
-            {/* center — position & period */}
             <div className="space-y-1 text-right flex-1">
               <p className="text-xs text-neutral-400 uppercase tracking-wide font-semibold">Position</p>
-              <p className="text-sm font-bold text-neutral-800">Digital Marketing Specialist</p>
-              <p className="text-xs text-neutral-500 mt-2">Payslip For: <span className="font-semibold text-neutral-700">Feb / 2026</span></p>
+              <p className="text-sm font-bold text-neutral-800">{d.position}</p>
+              <p className="text-xs text-neutral-500 mt-2">Payslip For: <span className="font-semibold text-neutral-700">{d.month} / {d.year}</span></p>
             </div>
 
-            {/* right — logo box */}
             <div className="shrink-0 w-20 h-16 border-2 border-dashed border-neutral-300 rounded-lg flex items-center justify-center">
               <span className="text-[10px] text-neutral-400 text-center leading-tight">Logo</span>
             </div>
@@ -176,24 +169,21 @@ function PayslipModal({ onClose }: { onClose: () => void }) {
 
           {/* ── BOTTOM SECTION ── */}
           <div className="flex items-start justify-between gap-6">
-
-            {/* left — totals */}
             <div className="space-y-2 min-w-[160px]">
               <div className="flex justify-between gap-8">
                 <span className="text-xs text-neutral-500">Gross</span>
-                <span className="text-sm font-semibold text-neutral-800">19000</span>
+                <span className="text-sm font-semibold text-neutral-800">{t.gross}</span>
               </div>
               <div className="flex justify-between gap-8">
                 <span className="text-xs text-neutral-500">Deduction</span>
-                <span className="text-sm font-semibold text-neutral-800">5909</span>
+                <span className="text-sm font-semibold text-neutral-800">{t.deduction}</span>
               </div>
               <div className="flex justify-between gap-8 border-t border-neutral-200 pt-2 mt-1">
                 <span className="text-xs font-bold text-neutral-700">Net Salary</span>
-                <span className="text-sm font-bold text-blue-600">13091/-</span>
+                <span className="text-sm font-bold text-blue-600">{t.net}/-</span>
               </div>
             </div>
 
-            {/* right — signature & address */}
             <div className="text-right">
               <p className="text-xs text-neutral-500 italic mb-6">signature of proprietor</p>
               <p className="text-[11px] text-neutral-400 leading-relaxed max-w-xs">
@@ -205,12 +195,14 @@ function PayslipModal({ onClose }: { onClose: () => void }) {
 
           {/* ── DOWNLOAD BUTTON ── */}
           <div className="flex justify-end mt-6 pt-4 border-t border-neutral-100">
-            <button
-              type="button"
-              className="h-11 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-semibold transition-all shadow-sm"
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/payslip/${payslip.id}/download`}
+              target="_blank"
+              download
+              className="h-11 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white flex items-center justify-center text-sm font-semibold transition-all shadow-sm"
             >
               Download PDF
-            </button>
+            </a>
           </div>
 
         </div>
@@ -222,7 +214,21 @@ function PayslipModal({ onClose }: { onClose: () => void }) {
 export default function SalaryPage() {
   const [form, setForm] = useState<SalaryForm>(empty);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [showPayslip, setShowPayslip] = useState(false);
+  const [activePayslip, setActivePayslip] = useState<any>(null);
+  const [employeesData, setEmployeesData] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await getEmployees();
+        setEmployeesData(res.data || []);
+      } catch (err) {
+        console.error("Failed loading employees", err);
+      }
+    }
+    load();
+  }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
@@ -232,32 +238,52 @@ export default function SalaryPage() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: FormErrors = {};
     if (!form.employees) errs.employees = "This field is required";
     if (!form.month)     errs.month     = "This field is required";
     if (!form.year)      errs.year      = "This field is required";
-    setErrors(errs);
+    
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await createSalary(form);
+      if (res.success) {
+        // Backend now returns { success: true, data: salary_with_payslip } natively
+        const salaryObj = res.data;
+        // Fetch payslip automatically using the logic linked if needed, or if UI is configured, it auto hooks.
+        // Usually, to immediately render mapping, we must fetch the specific payslip!
+        
+        // Wait, the API creates the payslip in the backend via await payslipService.createPayslip(salary.id).
+        // If we want instantly to fetch payslips:
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+        const payslipListRes = await fetch(`${API_URL}/payslip`);
+        const pListJson = await payslipListRes.json();
+        const createdPayslip = pListJson.data.find((p: any) => p.salaryId === salaryObj.id);
+        
+        setActivePayslip(createdPayslip);
+      }
+    } catch (err: any) {
+      setErrors({ api: err.message || "Duplicate or failed to calculate salary." });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <PageContainer>
-      {showPayslip && <PayslipModal onClose={() => setShowPayslip(false)} />}
+      {activePayslip && <PayslipModal payslip={activePayslip} onClose={() => setActivePayslip(null)} />}
 
-      {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-neutral-800">Salary Details</h1>
           <p className="text-sm text-neutral-400 mt-0.5">Enter monthly salary breakdown for an employee</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowPayslip(true)}
-          className="h-11 px-5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-semibold transition-all shadow-sm whitespace-nowrap"
-        >
-          View Payslip
-        </button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -290,17 +316,13 @@ export default function SalaryPage() {
 
           return (
             <aside className="w-full lg:w-60 shrink-0 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-              <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Summary</p>
-              <SummaryRow label="Salary per Day"  value={String(salaryPerDay)} />
-              <SummaryRow label="Salary per Hour" value={String(salaryPerHour)} />
-              <SummaryRow label="OT pay"          value={String(otPay)} />
-              <SummaryRow label="Gross salary"    value={String(grossSalary)} />
-              <SummaryRow label="Time penalty"    value={String(timePenalty)} />
-              <SummaryRow label="Leave penalty"   value={String(leavePenalty)} />
+              <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Summary Previews</p>
+              <SummaryRow label="Gross predicted" value={String(grossSalary)} />
               <div className="mt-3 rounded-lg bg-blue-600 px-3 py-3 flex items-center justify-between">
-                <span className="text-xs font-semibold text-blue-100">Total deduction</span>
-                <span className="text-sm font-bold text-white">{totalDeduction}</span>
+                <span className="text-xs font-semibold text-blue-100">Live Prediction Net</span>
+                <span className="text-sm font-bold text-white">{grossSalary - totalDeduction}</span>
               </div>
+              <ErrorMsg msg={errors.api} />
             </aside>
           );
         })()}
@@ -308,14 +330,12 @@ export default function SalaryPage() {
         {/* ── RIGHT PANEL: Form ── */}
         <form onSubmit={handleSubmit} noValidate className="flex-1 w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-
-            {/* ROW 1 */}
             <div>
               <Label text="Employees" required />
               <select name="employees" value={form.employees} onChange={handleChange}
                 className={errors.employees ? selectErrCls : selectCls}>
                 <option value="">Select employee</option>
-                {EMPLOYEES.map((e) => <option key={e}>{e}</option>)}
+                {employeesData.map((e) => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
               </select>
               <ErrorMsg msg={errors.employees} />
             </div>
@@ -325,13 +345,12 @@ export default function SalaryPage() {
                 placeholder="1" className={inputCls} />
             </div>
 
-            {/* ROW 2 */}
             <div>
-              <Label text="Month" required />
+              <Label text="Month (1-12)" required />
               <select name="month" value={form.month} onChange={handleChange}
                 className={errors.month ? selectErrCls : selectCls}>
                 <option value="">Select month</option>
-                {MONTHS.map((m) => <option key={m}>{m}</option>)}
+                {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
               <ErrorMsg msg={errors.month} />
             </div>
@@ -341,13 +360,12 @@ export default function SalaryPage() {
                 placeholder="0" className={inputCls} />
             </div>
 
-            {/* ROW 3 */}
             <div>
               <Label text="Year" required />
               <select name="year" value={form.year} onChange={handleChange}
                 className={errors.year ? selectErrCls : selectCls}>
                 <option value="">Select year</option>
-                {YEARS.map((y) => <option key={y}>{y}</option>)}
+                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
               <ErrorMsg msg={errors.year} />
             </div>
@@ -357,7 +375,6 @@ export default function SalaryPage() {
                 placeholder="0" className={inputCls} />
             </div>
 
-            {/* ROW 4 */}
             <div>
               <Label text="Working Days" />
               <input name="workingDays" value={form.workingDays} onChange={handleChange}
@@ -369,7 +386,6 @@ export default function SalaryPage() {
                 placeholder="0" className={inputCls} />
             </div>
 
-            {/* ROW 5 */}
             <div>
               <Label text="Working Hours" />
               <input name="workingHours" value={form.workingHours} onChange={handleChange}
@@ -381,7 +397,6 @@ export default function SalaryPage() {
                 placeholder="200" className={inputCls} />
             </div>
 
-            {/* ROW 6 */}
             <div>
               <Label text="Basic Salary" />
               <input name="basicSalary" value={form.basicSalary} onChange={handleChange}
@@ -393,7 +408,6 @@ export default function SalaryPage() {
                 placeholder="5000" className={inputCls} />
             </div>
 
-            {/* ROW 7 */}
             <div>
               <Label text="Incentive" />
               <input name="incentive" value={form.incentive} onChange={handleChange}
@@ -405,7 +419,6 @@ export default function SalaryPage() {
                 placeholder="0" className={inputCls} />
             </div>
 
-            {/* ROW 8 */}
             <div>
               <Label text="Arrears" />
               <input name="arrears" value={form.arrears} onChange={handleChange}
@@ -417,7 +430,6 @@ export default function SalaryPage() {
                 placeholder="2000" className={inputCls} />
             </div>
 
-            {/* ROW 9 */}
             <div>
               <Label text="TA / DA" />
               <input name="tada" value={form.tada} onChange={handleChange}
@@ -429,7 +441,6 @@ export default function SalaryPage() {
                 placeholder="3000" className={inputCls} />
             </div>
 
-            {/* ROW 10 */}
             <div>
               <Label text="Bonus" />
               <input name="bonus" value={form.bonus} onChange={handleChange}
@@ -441,7 +452,6 @@ export default function SalaryPage() {
                 placeholder="0" className={inputCls} />
             </div>
 
-            {/* ROW 11 */}
             <div>
               <Label text="Paid Leaves" />
               <input name="paidLeaves" value={form.paidLeaves} onChange={handleChange}
@@ -452,24 +462,15 @@ export default function SalaryPage() {
               <input name="emi" value={form.emi} onChange={handleChange}
                 placeholder="0" className={inputCls} />
             </div>
-
-            {/* ROW 12 — Net Salary right-column */}
-            <div className="hidden md:block" />
-            <div>
-              <Label text="Net Salary" />
-              <input name="netSalary" value={form.netSalary} onChange={handleChange}
-                placeholder="28500" className={inputCls} />
-            </div>
-
           </div>
 
-          {/* Submit */}
           <div className="flex justify-center mt-8">
             <button
               type="submit"
-              className="h-11 px-10 rounded-lg bg-green-500 hover:bg-green-600 active:scale-[0.98] text-white text-sm font-semibold uppercase tracking-wide transition-all shadow-sm"
+              disabled={submitting}
+              className="h-11 px-10 rounded-lg bg-green-500 hover:bg-green-600 disabled:bg-neutral-400 active:scale-[0.98] text-white text-sm font-semibold uppercase tracking-wide transition-all shadow-sm"
             >
-              Submit
+              {submitting ? "Calculating..." : "Submit & Generate Payslip"}
             </button>
           </div>
         </form>
