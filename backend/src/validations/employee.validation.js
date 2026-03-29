@@ -37,6 +37,8 @@ const createEmployeeSchema = z.object({
     z.number().int().nullable().optional()
   ),
   
+  previousCompany: z.string().trim().min(1, "Previous company name cannot be empty").optional(),
+
   departmentId: z.string().uuid("Invalid department UUID format").optional().nullable(),
   department: z.string().trim().optional().nullable(),
 }).refine(data => data.departmentId || data.department, {

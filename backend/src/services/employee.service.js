@@ -38,12 +38,51 @@ async function createEmployee(data) {
     data.departmentId = dept.id;
   }
 
-  // 3. Clean input so Prisma doesn't throw on unknown field mapping
+  // 3. Clean department name field — Prisma only wants departmentId
   delete data.department;
 
-  // Create employee
+  // 4. Employer linking: if previousCompany provided, find-or-create Employer
+  let employerId = null;
+
+  if (data.previousCompany) {
+    const employerName = data.previousCompany.trim();
+
+    // Try to find existing employer (case-insensitive)
+    let employer = await prisma.employer.findFirst({
+      where: {
+        name: { equals: employerName, mode: "insensitive" },
+      },
+    });
+
+    // If not found, create a new employer
+    if (!employer) {
+      // Employer requires companyId — find the singleton company
+      const company = await prisma.company.findFirst();
+      if (company) {
+        employer = await prisma.employer.create({
+          data: {
+            name: employerName,
+            companyId: company.id,
+          },
+        });
+      }
+      // If no company exists yet, skip employer linking (can't create without company)
+    }
+
+    if (employer) {
+      employerId = employer.id;
+    }
+  }
+
+  // Clean previousCompany — not a Prisma column
+  delete data.previousCompany;
+
+  // Create employee with employer link
   const employee = await prisma.employee.create({
-    data,
+    data: {
+      ...data,
+      ...(employerId ? { employerId } : {}),
+    },
   });
 
   return employee;
