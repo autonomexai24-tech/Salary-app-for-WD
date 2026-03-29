@@ -5,17 +5,21 @@ const app = express();
 const departmentRoutes = require("./routes/department.routes");
 const employeeRoutes = require("./routes/employee.routes");
 const salaryRoutes = require("./routes/salary.routes");
+const companyRoutes = require("./routes/company.routes");
+const employerRoutes = require("./routes/employer.routes");
 const errorMiddleware = require("./middlewares/error.middleware");
 
 // Global Middleware
 app.use(cors());
 app.use(express.json());
 
-// ✅ CORRECT BASE PATH
+// Route Registration
 app.use("/api/departments", departmentRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/salary", salaryRoutes);
 app.use("/api/payslip", require("./routes/payslip.routes"));
+app.use("/api/company", companyRoutes);
+app.use("/api/employers", employerRoutes);
 
 // health check
 app.get("/api/health", (req, res) => {
