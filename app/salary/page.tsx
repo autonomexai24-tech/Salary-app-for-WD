@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Download, FileText, CalendarDays, CreditCard, Banknote } from "lucide-react";
+import { AlertCircle, Download } from "lucide-react";
 
 interface SalaryForm {
   employees: string;
@@ -101,173 +101,208 @@ function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void 
   if (!payslip) return null;
 
   const d = payslip.data || payslip;
-  const s = d.salary || {};
+  const comp = d.company || {};
+  const att = d.attendance || {};
+  const earn = d.earnings || d.salary || {};
+  const ded = d.deductions || {};
   const t = d.totals || {};
 
-  const basicSalary = Number(s.basicSalary) || 0;
-  const workingDays = Number(s.workingDays) || 26;
-  const workingHours = Number(s.workingHours) || (workingDays * 8);
+  const fmt = (v: any) => Math.round(Number(v) || 0).toLocaleString("en-IN");
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const monthName = MONTHS[parseInt(d.month) - 1] || d.month;
 
-  const perDay = workingDays > 0 ? (basicSalary / workingDays).toFixed(2) : "0.00";
-  const perHour = workingHours > 0 ? (basicSalary / workingHours).toFixed(2) : "0.00";
-
-  const totalEarnings = (
-    basicSalary +
-    (Number(s.incentive) || 0) +
-    (Number(s.taDa) || 0) +
-    (Number(s.arrears) || 0) +
-    (Number(s.bonus) || 0) +
-    (Number(s.otHours) * (basicSalary / Math.max(1, workingHours))) || 0
-  );
-
-  const totalDeductions = (
-    (Number(s.professionalTax) || 0) +
-    (Number(s.advanceTaken) || 0) +
-    (Number(s.advanceDeducted) || 0) +
-    (Number(s.extraFine) || 0) +
-    (Number(s.emi) || 0) +
-    (Number(s.minusMinutes) || 0)
-  );
-
-  const displayEarnings = Number(totalEarnings).toFixed(0);
-  const displayGross = t.gross ? String(t.gross).replace(/[^\d.]/g, '') : displayEarnings;
-  const displayDeductionsStr = t.deduction ? String(t.deduction).replace(/[^\d.]/g, '') : Number(totalDeductions).toFixed(0);
-  
-  const computedNet = Number(displayGross) - Number(displayDeductionsStr);
-  const displayNetStr = t.net ? String(t.net).replace(/[^\d.]/g, '') : String(computedNet);
-
-  const daysPresent = workingDays - (Number(s.leavesTaken) || 0);
-
-  // Build download URL — ensure /api prefix is always present (mirrors lib/api.ts logic)
+  // Download URL
   let dlBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
-  if (!dlBase.endsWith("/api")) {
-    dlBase += "/api";
-  }
+  if (!dlBase.endsWith("/api")) dlBase += "/api";
   const downloadUrl = `${dlBase}/payslip/${payslip.id}/download`;
+
+  // Earnings items
+  const earningsItems = [
+    { label: "Basic Salary", value: earn.basicSalary },
+    { label: "Incentive", value: earn.incentive },
+    { label: "TA / DA", value: earn.taDa },
+    { label: "Bonus", value: earn.bonus },
+    { label: "Arrears", value: earn.arrears },
+    { label: "OT Pay", value: earn.otPay },
+  ];
+  const totalEarn = earningsItems.reduce((sum, i) => sum + (Number(i.value) || 0), 0);
+
+  // Deduction items
+  const deductionItems = [
+    { label: "Professional Tax", value: ded.professionalTax },
+    { label: "Advance Taken", value: ded.advanceTaken },
+    { label: "Advance Deducted", value: ded.advanceDeducted },
+    { label: "Extra Fine / Late", value: ded.extraFine },
+    { label: "Leave Penalty", value: ded.leavePenalty },
+    { label: "Time Penalty", value: ded.timePenalty },
+    { label: "EMI", value: ded.emi },
+  ];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-slate-50 w-full max-w-6xl max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        
-        {/* HEADER SECTION */}
-        <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 flex border rounded-lg items-center justify-center bg-blue-50 border-blue-100 text-blue-600">
-              <FileText className="w-5 h-5" />
+      <div className="bg-white w-full max-w-3xl max-h-[92vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+
+        {/* ── Scroll area for the payslip preview ── */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* ═══ SECTION 1: COMPANY HEADER BAND ═══ */}
+          <div className="bg-indigo-900 px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-lg bg-white flex items-center justify-center text-[10px] text-gray-400 font-bold border border-gray-200">
+                LOGO
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">{comp.name || "Web Dreams"}</h2>
+                <p className="text-xs text-blue-200 italic">the WWW dream comes true...</p>
+                {(comp.phone || comp.email) && (
+                  <p className="text-[10px] text-blue-300 mt-0.5">
+                    {[comp.phone, comp.email].filter(Boolean).join("  |  ")}
+                  </p>
+                )}
+                {comp.address && <p className="text-[10px] text-blue-300">{comp.address}</p>}
+              </div>
             </div>
+            <div className="text-right">
+              <h3 className="text-lg font-bold text-white tracking-wide">SALARY SLIP</h3>
+              <p className="text-sm text-blue-200">{monthName} {d.year}</p>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 space-y-4">
+
+            {/* ═══ SECTION 2: EMPLOYEE DETAILS ═══ */}
             <div>
-              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Payslip Generated Preview</h2>
+              <div className="bg-indigo-50 px-3 py-1.5 rounded-t -mx-0">
+                <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wider">Employee Details</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-2 py-3 text-sm">
+                <div><span className="text-gray-500 text-xs font-medium">Employee Name:</span> <span className="font-semibold text-gray-900">{d.employeeName}</span></div>
+                <div><span className="text-gray-500 text-xs font-medium">Position:</span> <span className="font-semibold text-gray-900">{d.position}</span></div>
+                <div><span className="text-gray-500 text-xs font-medium">Email:</span> <span className="font-semibold text-gray-900">{d.employeeEmail || "—"}</span></div>
+                <div><span className="text-gray-500 text-xs font-medium">Department:</span> <span className="font-semibold text-gray-900">{d.department || "—"}</span></div>
+                <div><span className="text-gray-500 text-xs font-medium">Phone:</span> <span className="font-semibold text-gray-900">{d.employeePhone || "—"}</span></div>
+                <div><span className="text-gray-500 text-xs font-medium">Pay Period:</span> <span className="font-semibold text-gray-900">{monthName} {d.year}</span></div>
+              </div>
             </div>
+
+            {/* ═══ SECTION 3: ATTENDANCE & RATE CARD ═══ */}
+            <div>
+              <div className="bg-green-50 px-3 py-1.5 rounded-t">
+                <h4 className="text-xs font-bold text-green-800 uppercase tracking-wider">Attendance & Rate Card</h4>
+              </div>
+              <div className="grid grid-cols-4 gap-3 py-3">
+                {[
+                  { label: "Working Days", value: att.workingDays ?? "—" },
+                  { label: "Working Hours", value: att.workingHours ?? "—" },
+                  { label: "Leaves Taken", value: att.leavesTaken ?? "—" },
+                  { label: "OT Hours", value: att.otHours ?? "—" },
+                  { label: "Days Present", value: att.daysPresent ?? "—" },
+                  { label: "Salary / Day", value: `₹ ${fmt(att.salaryPerDay)}` },
+                  { label: "Salary / Hour", value: `₹ ${fmt(att.salaryPerHour)}` },
+                  { label: "Minus Minutes", value: att.minusMinutes ?? "—" },
+                ].map((item, i) => (
+                  <div key={i} className="bg-gray-50 rounded-lg px-3 py-2">
+                    <p className="text-[10px] text-gray-500 font-medium">{item.label}</p>
+                    <p className="text-sm font-bold text-gray-800">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ═══ SECTION 4: EARNINGS & DEDUCTIONS ═══ */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Earnings */}
+              <div className="border border-green-200 rounded-lg overflow-hidden">
+                <div className="bg-green-50 px-3 py-2 flex justify-between items-center">
+                  <span className="text-xs font-bold text-green-800 uppercase">Earnings</span>
+                  <span className="text-xs font-bold text-green-800">Amount (₹)</span>
+                </div>
+                {earningsItems.map((item, i) => (
+                  <div key={i} className={`flex justify-between px-3 py-1.5 text-xs ${i % 2 === 1 ? "bg-gray-50" : ""}`}>
+                    <span className="text-gray-700">{item.label}</span>
+                    <span className="font-semibold text-gray-900">{fmt(item.value)}</span>
+                  </div>
+                ))}
+                <div className="border-t border-green-200 bg-green-50 px-3 py-2 flex justify-between">
+                  <span className="text-xs font-bold text-green-800">Total Earnings</span>
+                  <span className="text-xs font-bold text-green-800">{fmt(totalEarn)}</span>
+                </div>
+              </div>
+
+              {/* Deductions */}
+              <div className="border border-red-200 rounded-lg overflow-hidden">
+                <div className="bg-red-50 px-3 py-2 flex justify-between items-center">
+                  <span className="text-xs font-bold text-red-800 uppercase">Deductions</span>
+                  <span className="text-xs font-bold text-red-800">Amount (₹)</span>
+                </div>
+                {deductionItems.map((item, i) => (
+                  <div key={i} className={`flex justify-between px-3 py-1.5 text-xs ${i % 2 === 1 ? "bg-gray-50" : ""}`}>
+                    <span className="text-gray-700">{item.label}</span>
+                    <span className="font-semibold text-gray-900">{fmt(item.value)}</span>
+                  </div>
+                ))}
+                <div className="border-t border-red-200 bg-red-50 px-3 py-2 flex justify-between">
+                  <span className="text-xs font-bold text-red-800">Total Deductions</span>
+                  <span className="text-xs font-bold text-red-800">{fmt(t.deduction)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ═══ SECTION 5: SALARY SUMMARY ═══ */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="text-xs font-bold text-indigo-800 uppercase mb-3">Salary Summary</h4>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Gross Salary:</span>
+                  <span className="font-bold text-gray-800">₹ {fmt(t.gross)}</span>
+                </div>
+                <div className="flex justify-between text-red-600">
+                  <span>(-) Total Deductions:</span>
+                  <span className="font-bold">₹ {fmt(t.deduction)}</span>
+                </div>
+                <div className="bg-indigo-900 text-white rounded-lg px-4 py-2.5 flex justify-between items-center mt-2">
+                  <span className="font-bold text-sm">NET SALARY:</span>
+                  <span className="font-black text-lg">₹ {fmt(t.net)}/-</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ═══ SECTION 6 & 7: SIGNATURES ═══ */}
+            <div className="flex justify-between items-end pt-6 pb-2">
+              <div className="text-center">
+                <div className="w-40 border-b border-gray-400 mb-1" />
+                <p className="text-xs font-semibold text-gray-600">Employee Signature</p>
+              </div>
+              <div className="text-center">
+                <div className="w-40 border-b border-gray-400 mb-1" />
+                <p className="text-xs font-semibold text-gray-600">Authorized Signatory</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400 italic text-center">
+              This is a computer-generated payslip and does not require a physical signature.
+            </p>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-6 bg-slate-100/50">
-          
-          {/* THE PHYSICAL PAYSLIP MOCK */}
-          <div className="min-w-[1000px] border border-slate-300 bg-white p-8 shadow-sm mx-auto">
-            
-            {/* Header */}
-            <div className="flex justify-between items-start mb-8">
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-slate-900">Employee Name:<span className="font-normal ml-1">{d.employeeName}</span></p>
-                <p className="text-sm font-bold text-slate-900">Employee ID:<span className="font-normal ml-1">{d.employeeEmail || `${(d.employeeName || "").replace(/\s+/g,"")}@gmail.com`}</span></p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-slate-900">Position:<span className="font-normal ml-1">{d.position}</span></p>
-                <p className="text-sm font-bold text-slate-900">Payslip For:<span className="font-normal ml-1">
-                  {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][parseInt(d.month)-1] || d.month} / {d.year}
-                </span></p>
-              </div>
-              <div className="text-right">
-                <h2 className="text-2xl font-black text-orange-500 tracking-tight">{d.company?.name || "Web Dreams"}</h2>
-                <p className="text-xs italic text-slate-500 font-medium">the WWW dream comes true...</p>
-              </div>
-            </div>
-
-            {/* Main Table */}
-            <table className="w-full border-collapse border border-slate-300 text-xs mb-4">
-              <thead>
-                <tr className="border-b border-slate-300">
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">Basic</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">Incentives</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">Bonus</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">TA/DA</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-green-700">Arrears</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Prof.tax</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Adv. pay</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Addition. adv</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Adv deducted</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Extra fine</th>
-                  <th className="border-r border-slate-300 p-2 text-left font-semibold text-red-700">Leave penalty</th>
-                  <th className="p-2 text-left font-semibold text-red-700">Time penalty</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.basicSalary || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.incentive || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.bonus || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.taDa || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.arrears || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.professionalTax || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.advanceTaken || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.additionalAdvance || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.advanceDeducted || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.extraFine || 0)}</td>
-                  <td className="border-r border-slate-300 p-2 font-medium">{Math.round(s.leavePenalty || 0)}</td>
-                  <td className="p-2 font-medium">{Math.round(s.timePenalty || 0)}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* Totals & Signature */}
-            <div className="flex justify-between items-start mt-6">
-              <div className="flex gap-10">
-                <div>
-                  <p className="text-sm font-bold text-slate-800 mb-1">Gross</p>
-                  <p className="text-sm font-medium">{Math.round(t.gross || 0)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-800 mb-1">Deduction</p>
-                  <p className="text-sm font-medium">{Math.round(t.deduction || 0)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-800 mb-1">Net salary</p>
-                  <p className="text-sm font-medium">{Math.round(t.net || 0)}/-</p>
-                </div>
-              </div>
-              
-              <div className="text-center mt-2">
-                <p className="text-sm font-bold text-slate-800 mb-8">signature of proprietor</p>
-                <p className="text-xs text-slate-600 max-w-xs mx-auto">
-                  {d.company?.address || "#51-B, Behind Mahaveer school, Bailappanavar nagar, Hubli-29"}
-                </p>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* FOOTER & ACTIONS */}
-        <div className="border-t border-slate-200 bg-white px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Alert className="border-amber-200 bg-amber-50 text-amber-800 p-3 sm:w-auto w-full py-2 flex items-center pt-2 pb-2">
-            <AlertCircle className="h-4 w-4 text-amber-600 mr-2" />
-            <AlertDescription className="text-xs font-medium">
-              Once generated, this payslip snapshot will be permanent.
+        {/* ═══ FOOTER ACTION BAR ═══ */}
+        <div className="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between">
+          <Alert className="border-amber-200 bg-amber-50 text-amber-800 p-2 py-1.5 flex items-center">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-600 mr-1.5" />
+            <AlertDescription className="text-[11px] font-medium">
+              This payslip snapshot is permanent once generated.
             </AlertDescription>
           </Alert>
-          
-          <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-            <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onClose}>
               Back to Edit
             </Button>
-            <Button className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-sm" asChild>
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
               <a href={downloadUrl} target="_blank" download>
-                <Download className="w-4 h-4 mr-2" />
-                Generate & Download PDF
+                <Download className="w-3.5 h-3.5 mr-1.5" />
+                Download PDF
               </a>
             </Button>
           </div>
