@@ -449,43 +449,97 @@ export default function SalaryPage() {
         {(() => {
           const basic       = Number(form.basicSalary) || 0;
           const workDays    = Number(form.workingDays) || 0;
-          const workHours   = Number(form.workingHours) || 0;
+          const workHours   = Number(form.workingHours) || 8; // fallback to 8 hr/day standard
           const otHrs       = Number(form.otHours) || 0;
           const incentive   = Number(form.incentive) || 0;
           const arrears     = Number(form.arrears) || 0;
           const tada        = Number(form.tada) || 0;
           const bonus       = Number(form.bonus) || 0;
           const profTax     = Number(form.professionalTax) || 0;
-          const advTaken    = Number(form.advanceTaken) || 0;
-          const addlAdv     = Number(form.additionalAdvance) || 0;
           const advDeducted = Number(form.advanceDeducted) || 0;
           const extraFine   = Number(form.extraFine) || 0;
           const emi         = Number(form.emi) || 0;
-          const minusMinsRs = Number(form.minusMinutesRupees) || 0;
+          const minusMinsRs = Number(form.minusMinutesRupees) || 0; // Interpreted as late minutes
+          const leavesTaken = Number(form.leavesTaken) || 0;
 
-          const salaryPerDay  = workDays > 0 ? Math.round(basic / workDays) : 0;
-          const salaryPerHour = workHours > 0 ? Math.round(basic / workHours) : 0;
+          // MIRROR BACKEND CALCULATIONS EXACTLY
+          const salaryPerDay  = workDays > 0 ? basic / workDays : 0;
+          const salaryPerHour = workHours > 0 ? salaryPerDay / workHours : 0;
           const otPay         = otHrs * salaryPerHour;
-          const grossSalary   = basic + incentive + arrears + tada + bonus + otPay;
-          const timePenalty   = minusMinsRs;
-          const leavePenalty  = 0;
-          const totalDeduction = profTax + advTaken + addlAdv + advDeducted + extraFine + emi + timePenalty + leavePenalty;
+          
+          const grossSalary   = basic + incentive + bonus + tada + arrears + otPay;
+          
+          const leavePenalty  = leavesTaken * salaryPerDay;
+          const timePenalty   = (minusMinsRs / 60) * salaryPerHour;
+          const finePenalty   = extraFine + timePenalty + leavePenalty;
+          
+          const totalDeduction = profTax + advDeducted + extraFine + leavePenalty + timePenalty + emi;
+          const netSalary = grossSalary - totalDeduction;
+
+          const fmt = (n: number) => Math.round(n);
 
           return (
-            <aside className="w-full lg:w-60 shrink-0 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-              <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Summary Previews</p>
-              <SummaryRow label="Gross predicted" value={String(grossSalary)} />
-              <div className="mt-3 rounded-lg bg-blue-600 px-3 py-3 flex items-center justify-between">
-                <span className="text-xs font-semibold text-blue-100">Live Prediction Net</span>
-                <span className="text-sm font-bold text-white">{grossSalary - totalDeduction}</span>
+            <aside className="w-full lg:w-72 shrink-0 rounded-xl border border-neutral-200 bg-neutral-50 p-5 sticky top-6">
+              <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">Summary Previews</p>
+              
+              <div className="space-y-3 mb-6 text-sm font-semibold">
+                <div className="flex justify-between text-blue-800">
+                  <span>Gross Salary:</span>
+                  <span>₹ {fmt(grossSalary)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-600">
+                  <span>Salary per Month:</span>
+                  <span>₹ {fmt(basic)}</span>
+                </div>
+                <div className="flex justify-between text-green-700">
+                  <span>Salary per Day:</span>
+                  <span>₹ {fmt(salaryPerDay)}</span>
+                </div>
+                <div className="flex justify-between text-green-700">
+                  <span>Salary per Hour:</span>
+                  <span>₹ {fmt(salaryPerHour)}</span>
+                </div>
+                <div className="flex justify-between text-green-700">
+                  <span>OT pay:</span>
+                  <span>₹ {fmt(otPay)}</span>
+                </div>
+                <div className="flex justify-between text-green-700">
+                  <span>Time penalty:</span>
+                  <span>₹ {fmt(timePenalty)}</span>
+                </div>
+                <div className="flex justify-between text-green-700">
+                  <span>Leave penalty:</span>
+                  <span>₹ {fmt(leavePenalty)}</span>
+                </div>
+                <div className="flex justify-between text-green-700">
+                  <span>Fine Penalty:</span>
+                  <span>₹ {fmt(finePenalty)}</span>
+                </div>
+                <div className="flex justify-between border-t border-neutral-200 pt-3 text-blue-800">
+                  <span>Total Deduction:</span>
+                  <span>₹ {fmt(totalDeduction)}</span>
+                </div>
+                <div className="flex justify-between border-t border-neutral-300 mt-2 pt-3 text-green-700 text-lg">
+                  <span>Net Salary:</span>
+                  <span>₹ {fmt(netSalary)}</span>
+                </div>
               </div>
+
+              <button
+                form="salary-form"
+                type="submit"
+                disabled={submitting}
+                className="w-full h-11 rounded-lg bg-green-500 hover:bg-green-600 disabled:bg-neutral-400 active:scale-[0.98] text-white text-sm font-bold uppercase tracking-wide transition-all shadow-sm flex items-center justify-center mt-2"
+              >
+                {submitting ? "Calculating..." : "Submit & Generate Payslip"}
+              </button>
               <ErrorMsg msg={errors.api} />
             </aside>
           );
         })()}
 
         {/* ── RIGHT PANEL: Form ── */}
-        <form onSubmit={handleSubmit} noValidate className="flex-1 w-full">
+        <form id="salary-form" onSubmit={handleSubmit} noValidate className="flex-1 w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             <div>
               <Label text="Employees" required />
@@ -621,15 +675,6 @@ export default function SalaryPage() {
             </div>
           </div>
 
-          <div className="flex justify-center mt-8">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="h-11 px-10 rounded-lg bg-green-500 hover:bg-green-600 disabled:bg-neutral-400 active:scale-[0.98] text-white text-sm font-semibold uppercase tracking-wide transition-all shadow-sm"
-            >
-              {submitting ? "Calculating..." : "Submit & Generate Payslip"}
-            </button>
-          </div>
         </form>
 
       </div>
