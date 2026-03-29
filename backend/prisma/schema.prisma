@@ -37,6 +37,7 @@ model Employee {
   departmentId    String    @db.Uuid
   department      Department @relation(fields: [departmentId], references: [id])
   salaries        Salary[]
+  payslips        Payslip[]
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -87,7 +88,28 @@ model Salary {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  payslip         Payslip?
+
   // Strictly enforce one salary entry per employee / per month / per year context limit.
   @@unique([employeeId, month, year])
   @@map("salaries")
+}
+
+model Payslip {
+  id              String   @id @default(uuid()) @db.Uuid
+  
+  employeeId      String   @db.Uuid
+  salaryId        String   @unique @db.Uuid
+  
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  salary          Salary   @relation(fields: [salaryId], references: [id])
+
+  month           Int
+  year            Int
+
+  data            Json
+
+  createdAt       DateTime @default(now())
+
+  @@map("payslips")
 }

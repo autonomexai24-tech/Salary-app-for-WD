@@ -62,6 +62,10 @@ async function createSalary(data) {
     },
   });
 
+  // 4. Architect rule: Immediately map unalterable payslip identically upon Salary formulation.
+  const payslipService = require("./payslip.service");
+  await payslipService.createPayslip(salary.id);
+
   return salary;
 }
 

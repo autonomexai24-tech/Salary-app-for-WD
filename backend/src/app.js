@@ -15,6 +15,7 @@ app.use(express.json());
 app.use("/api/departments", departmentRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/salary", salaryRoutes);
+app.use("/api/payslip", require("./routes/payslip.routes"));
 
 // health check
 app.get("/api/health", (req, res) => {
