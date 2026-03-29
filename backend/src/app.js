@@ -8,6 +8,7 @@ const employeeRoutes = require("./routes/employee.routes");
 const salaryRoutes = require("./routes/salary.routes");
 const companyRoutes = require("./routes/company.routes");
 const employerRoutes = require("./routes/employer.routes");
+const authRoutes = require("./routes/auth.routes");
 const errorMiddleware = require("./middlewares/error.middleware");
 
 // Global Middleware
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use("/api/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Route Registration
+app.use("/api/auth", authRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/salary", salaryRoutes);

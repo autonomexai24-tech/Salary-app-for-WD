@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { getEmployees, createSalary } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -366,6 +367,14 @@ function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void 
 }
 
 export default function SalaryPage() {
+  return (
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <SalaryPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function SalaryPageContent() {
   const [form, setForm] = useState<SalaryForm>(empty);
   const [errors, setErrors] = useState<FormErrors>({});
   const [activePayslip, setActivePayslip] = useState<any>(null);

@@ -2,23 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Building2, IndianRupee, Settings } from "lucide-react";
+import { Users, Building2, IndianRupee, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
+  roles: ("EMPLOYER" | "ADMIN")[];
 }
 
-const navItems: NavItem[] = [
-  { label: "Employee", href: "/employee", icon: <Users size={20} /> },
-  { label: "Department", href: "/department", icon: <Building2 size={20} /> },
-  { label: "Salary", href: "/salary", icon: <IndianRupee size={20} /> },
-  { label: "Settings", href: "/settings", icon: <Settings size={20} /> },
+const allNavItems: NavItem[] = [
+  { label: "Employee",   href: "/employee",   icon: <Users size={20} />,       roles: ["EMPLOYER", "ADMIN"] },
+  { label: "Department", href: "/department",  icon: <Building2 size={20} />,   roles: ["EMPLOYER", "ADMIN"] },
+  { label: "Salary",     href: "/salary",      icon: <IndianRupee size={20} />, roles: ["ADMIN"] },
+  { label: "Settings",   href: "/settings",    icon: <Settings size={20} />,    roles: ["ADMIN"] },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, role, logout } = useAuth();
+
+  // Filter nav items based on user role
+  const navItems = allNavItems.filter(
+    (item) => role && item.roles.includes(role)
+  );
 
   return (
     <aside
@@ -29,6 +37,22 @@ export default function Sidebar() {
       <div className="flex items-center px-6 py-5 border-b border-white/10">
         <p className="text-white font-semibold text-base tracking-tight">Salary App</p>
       </div>
+
+      {/* User role badge */}
+      {user && (
+        <div className="px-6 py-3 border-b border-white/10">
+          <p className="text-white/80 text-xs font-medium truncate">{user.name}</p>
+          <span
+            className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase"
+            style={{
+              backgroundColor: role === "ADMIN" ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.25)",
+              color: role === "ADMIN" ? "#fca5a5" : "#86efac",
+            }}
+          >
+            {role}
+          </span>
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
@@ -57,6 +81,17 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Logout */}
+      <div className="px-3 py-4 border-t border-white/10">
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-4 rounded-lg min-h-[44px] text-sm font-medium text-white/60 hover:text-white hover:bg-white/10 transition-all w-full active:scale-[0.98] cursor-pointer"
+        >
+          <LogOut size={20} />
+          <span>Logout</span>
+        </button>
+      </div>
     </aside>
   );
 }

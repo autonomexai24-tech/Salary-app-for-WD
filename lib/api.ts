@@ -17,8 +17,17 @@ async function request<T>(
   console.log("API URL:", url);
 
   try {
+    // Auto-attach auth token if available
+    const authHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        authHeaders["Authorization"] = `Bearer ${token}`;
+      }
+    }
+
     const res = await fetch(url, {
-      headers: { "Content-Type": "application/json", ...options.headers },
+      headers: { ...authHeaders, ...options.headers },
       ...options,
     });
 

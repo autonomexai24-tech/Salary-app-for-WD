@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { Trash2, Pencil, Loader2, X, Check } from "lucide-react";
 import {
   getDepartments,
@@ -16,6 +17,14 @@ const inputClass =
   "w-full h-11 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all";
 
 export default function DepartmentPage() {
+  return (
+    <ProtectedRoute allowedRoles={["EMPLOYER", "ADMIN"]}>
+      <DepartmentPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function DepartmentPageContent() {
   /* ───────── state ───────── */
   const [name, setName] = useState("");
   const [departments, setDepartments] = useState<Department[]>([]);

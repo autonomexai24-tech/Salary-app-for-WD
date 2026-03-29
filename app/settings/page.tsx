@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { Trash2, Pencil, X, Check, Upload, Loader2, Eye } from "lucide-react";
 import {
   getCompany,
@@ -62,6 +63,14 @@ interface Employer {
 }
 
 export default function SettingsPage() {
+  return (
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <SettingsPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function SettingsPageContent() {
   const router = useRouter();
 
   /* ── Company state ── */

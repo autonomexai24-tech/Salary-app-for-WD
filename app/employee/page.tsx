@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
 
 interface FormState {
   firstName: string;
@@ -87,6 +88,14 @@ const selectClass =
 import { createEmployee, getDepartments, Department } from "@/lib/api";
 
 export default function EmployeePage() {
+  return (
+    <ProtectedRoute allowedRoles={["EMPLOYER", "ADMIN"]}>
+      <EmployeePageContent />
+    </ProtectedRoute>
+  );
+}
+
+function EmployeePageContent() {
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
