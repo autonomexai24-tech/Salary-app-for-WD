@@ -27,8 +27,14 @@ async function request<T>(
     if (!res.ok) {
       // Handle errors properly (log response)
       console.error("API Error Response:", json);
-      const message =
-        json?.message || json?.errors?.[0]?.message || "Something went wrong";
+      // Build a user-friendly message that includes field-level Zod errors
+      let message = json?.message || "Something went wrong";
+      if (json?.errors && Array.isArray(json.errors) && json.errors.length > 0) {
+        const details = json.errors
+          .map((e: any) => e.field ? `${e.field}: ${e.message}` : e.message)
+          .join(", ");
+        message = `${message} — ${details}`;
+      }
       throw new Error(message);
     }
 

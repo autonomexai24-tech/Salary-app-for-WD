@@ -30,6 +30,7 @@ interface FormErrors {
   lastName?: string;
   phone?: string;
   email?: string;
+  department?: string;
 }
 
 const initialState: FormState = {
@@ -122,6 +123,7 @@ export default function EmployeePage() {
     if (!form.lastName.trim()) newErrors.lastName = "This field is required";
     if (!form.phone.trim()) newErrors.phone = "This field is required";
     if (!form.email.trim()) newErrors.email = "This field is required";
+    if (!form.department) newErrors.department = "Please select a department";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -213,8 +215,8 @@ export default function EmployeePage() {
           </Field>
 
           {/* Department */}
-          <Field label="Department">
-            <select name="department" value={form.department} onChange={handleChange} className={selectClass}>
+          <Field label="Department" required error={errors.department}>
+            <select name="department" value={form.department} onChange={handleChange} className={[selectClass, errors.department ? "border-red-400 bg-red-50 focus:border-red-500 focus:ring-red-100" : ""].join(" ")}>
               <option value="">Select department</option>
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>
