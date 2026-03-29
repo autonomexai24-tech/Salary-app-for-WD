@@ -222,6 +222,16 @@ export async function createEmployer(payload: {
   });
 }
 
+export async function updateEmployer(
+  id: string,
+  payload: { name: string; address?: string; phone?: string }
+): Promise<any> {
+  return request(`/employers/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function deleteEmployer(id: string): Promise<any> {
   return request(`/employers/${id}`, {
     method: "DELETE",

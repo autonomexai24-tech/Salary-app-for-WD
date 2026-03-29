@@ -55,6 +55,30 @@ async function getEmployers({ page = 1, limit = 50 } = {}) {
 }
 
 /**
+ * Update an employer by ID.
+ */
+async function updateEmployer(id, data) {
+  const employer = await prisma.employer.findUnique({ where: { id } });
+
+  if (!employer) {
+    const error = new Error("Employer not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const updated = await prisma.employer.update({
+    where: { id },
+    data: {
+      name: data.name || employer.name,
+      address: data.address !== undefined ? (data.address || null) : employer.address,
+      phone: data.phone !== undefined ? (data.phone || null) : employer.phone,
+    },
+  });
+
+  return updated;
+}
+
+/**
  * Delete an employer by ID.
  */
 async function deleteEmployer(id) {
@@ -83,5 +107,6 @@ async function deleteEmployer(id) {
 module.exports = {
   createEmployer,
   getEmployers,
+  updateEmployer,
   deleteEmployer,
 };

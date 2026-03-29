@@ -8,6 +8,7 @@ import {
   upsertCompany,
   getEmployers,
   createEmployer,
+  updateEmployer,
   deleteEmployer,
 } from "@/lib/api";
 
@@ -199,6 +200,23 @@ export default function SettingsPage() {
   function handleCancelEdit() {
     setEditId(null);
     setEditForm({ name: "", address: "", phone: "" });
+  }
+
+  async function handleSaveEdit() {
+    if (!editId || !editForm.name.trim()) return;
+    setEmployerError(null);
+    try {
+      await updateEmployer(editId, {
+        name: editForm.name.trim(),
+        address: editForm.address.trim() || undefined,
+        phone: editForm.phone.trim() || undefined,
+      });
+      setEditId(null);
+      setEditForm({ name: "", address: "", phone: "" });
+      await loadEmployers();
+    } catch (err: any) {
+      setEmployerError(err.message || "Failed to update employer");
+    }
   }
 
   /* ══════ RENDER ══════ */
@@ -459,6 +477,14 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2">
                         {editId === emp.id ? (
                           <>
+                            <button
+                              type="button"
+                              onClick={handleSaveEdit}
+                              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100 active:scale-[0.98] transition-all"
+                            >
+                              <Check size={13} />
+                              Save
+                            </button>
                             <button
                               type="button"
                               onClick={handleCancelEdit}

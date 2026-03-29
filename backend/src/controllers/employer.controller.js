@@ -22,6 +22,17 @@ async function getEmployers(req, res, next) {
   }
 }
 
+async function updateEmployer(req, res, next) {
+  try {
+    const { id } = uuidParamSchema.parse(req.params);
+    const data = createEmployerSchema.parse(req.body);
+    const employer = await employerService.updateEmployer(id, data);
+    return res.status(200).json({ success: true, data: employer });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function deleteEmployer(req, res, next) {
   try {
     const { id } = uuidParamSchema.parse(req.params);
@@ -35,5 +46,6 @@ async function deleteEmployer(req, res, next) {
 module.exports = {
   createEmployer,
   getEmployers,
+  updateEmployer,
   deleteEmployer,
 };
