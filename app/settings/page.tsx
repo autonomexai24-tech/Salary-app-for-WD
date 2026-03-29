@@ -7,7 +7,6 @@ import {
   getCompany,
   upsertCompany,
   getEmployers,
-  createEmployer,
   updateEmployer,
   deleteEmployer,
 } from "@/lib/api";
@@ -75,8 +74,6 @@ export default function SettingsPage() {
   /* ── Employer state ── */
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [employersLoading, setEmployersLoading] = useState(true);
-  const [newEmployer, setNewEmployer] = useState({ name: "", address: "", phone: "" });
-  const [employerSubmitting, setEmployerSubmitting] = useState(false);
   const [employerError, setEmployerError] = useState<string | null>(null);
 
   /* ── Inline edit state ── */
@@ -161,26 +158,7 @@ export default function SettingsPage() {
 
   /* ══════ EMPLOYER HANDLERS ══════ */
 
-  async function handleAddEmployer() {
-    const trimmedName = newEmployer.name.trim();
-    if (!trimmedName) return;
 
-    setEmployerSubmitting(true);
-    setEmployerError(null);
-    try {
-      await createEmployer({
-        name: trimmedName,
-        address: newEmployer.address.trim() || undefined,
-        phone: newEmployer.phone.trim() || undefined,
-      });
-      setNewEmployer({ name: "", address: "", phone: "" });
-      await loadEmployers();
-    } catch (err: any) {
-      setEmployerError(err.message || "Failed to add employer");
-    } finally {
-      setEmployerSubmitting(false);
-    }
-  }
 
   async function handleDeleteEmployer(id: string) {
     setEmployerError(null);
@@ -324,67 +302,7 @@ export default function SettingsPage() {
 
       {/* ══════════════════ SECTION 2 — EMPLOYER MANAGEMENT ══════════════════ */}
       <section>
-        <h2 className="text-base font-semibold text-neutral-700 mb-4">Employer Management</h2>
 
-        {employerError && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <span className="flex-1">{employerError}</span>
-            <button onClick={() => setEmployerError(null)} className="text-red-400 hover:text-red-600">
-              <X size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* ── Add Employer Form ── */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
-              Employer Name
-            </label>
-            <input
-              value={newEmployer.name}
-              onChange={(e) => setNewEmployer((p) => ({ ...p, name: e.target.value }))}
-              placeholder="Full name"
-              className={inputClass}
-              disabled={employerSubmitting}
-            />
-          </div>
-          <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
-              Address
-            </label>
-            <input
-              value={newEmployer.address}
-              onChange={(e) => setNewEmployer((p) => ({ ...p, address: e.target.value }))}
-              placeholder="City, State"
-              className={inputClass}
-              disabled={employerSubmitting}
-            />
-          </div>
-          <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
-              Phone
-            </label>
-            <input
-              value={newEmployer.phone}
-              onChange={(e) => setNewEmployer((p) => ({ ...p, phone: e.target.value }))}
-              placeholder="+91 ..."
-              className={inputClass}
-              disabled={employerSubmitting}
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={handleAddEmployer}
-              disabled={!newEmployer.name.trim() || employerSubmitting}
-              className="h-11 px-6 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {employerSubmitting && <Loader2 size={14} className="animate-spin" />}
-              Add Employer
-            </button>
-          </div>
-        </div>
 
         {/* ── Employer Table ── */}
         <div className="flex items-center justify-between mb-3">
