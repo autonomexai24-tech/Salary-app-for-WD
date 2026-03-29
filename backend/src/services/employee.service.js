@@ -47,31 +47,39 @@ async function createEmployee(data) {
   if (data.previousCompany) {
     const employerName = data.previousCompany.trim();
 
-    // Try to find existing employer (case-insensitive)
+    // 4a. Ensure company exists (MANDATORY — employer requires companyId)
+    let company = await prisma.company.findFirst();
+    if (!company) {
+      company = await prisma.company.create({
+        data: { name: "Default Company" },
+      });
+    }
+
+    // 4b. Find employer (case-insensitive to prevent duplicates)
     let employer = await prisma.employer.findFirst({
       where: {
         name: { equals: employerName, mode: "insensitive" },
       },
     });
 
-    // If not found, create a new employer
+    // 4c. Create employer if not found
     if (!employer) {
-      // Employer requires companyId — find the singleton company
-      const company = await prisma.company.findFirst();
-      if (company) {
-        employer = await prisma.employer.create({
-          data: {
-            name: employerName,
-            companyId: company.id,
-          },
-        });
-      }
-      // If no company exists yet, skip employer linking (can't create without company)
+      employer = await prisma.employer.create({
+        data: {
+          name: employerName,
+          companyId: company.id,
+        },
+      });
     }
 
-    if (employer) {
-      employerId = employer.id;
+    // 4d. Hard guarantee — no silent failure
+    if (!employer || !employer.id) {
+      const error = new Error("Employer creation failed");
+      error.statusCode = 500;
+      throw error;
     }
+
+    employerId = employer.id;
   }
 
   // Clean previousCompany — not a Prisma column
