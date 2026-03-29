@@ -36,10 +36,58 @@ model Employee {
 
   departmentId    String    @db.Uuid
   department      Department @relation(fields: [departmentId], references: [id])
+  salaries        Salary[]
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@index([departmentId])
   @@map("employees")
+}
+
+model Salary {
+  id              String   @id @default(uuid()) @db.Uuid
+  
+  employeeId      String   @db.Uuid
+  employee        Employee @relation(fields: [employeeId], references: [id])
+
+  month           Int
+  year            Int
+
+  workingDays     Int
+  workingHours    Int
+
+  basicSalary     Float
+  incentive       Float?
+  bonus           Float?
+  taDa            Float?
+  arrears         Float?
+
+  otHours         Float?
+  otPay           Float?
+
+  leavesTaken     Int?
+  leavePenalty    Float?
+
+  minusMinutes    Int?
+  timePenalty     Float?
+
+  extraFine       Float?
+
+  professionalTax Float?
+  emi             Float?
+
+  advanceTaken    Float?
+  advanceDeducted Float?
+
+  grossSalary     Float
+  totalDeduction  Float
+  netSalary       Float
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Strictly enforce one salary entry per employee / per month / per year context limit.
+  @@unique([employeeId, month, year])
+  @@map("salaries")
 }
