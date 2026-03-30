@@ -647,19 +647,6 @@ export default function LoginPage() {
                   </>
                 )}
               </button>
-
-              {/* Demo hint */}
-              <div className="flex items-start gap-2 p-3.5 rounded-lg bg-muted border border-border">
-                <div className="w-1 h-full min-h-[16px] rounded-full bg-muted-foreground/30 flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Demo credentials</p>
-                  <p className="text-[12px] text-muted-foreground leading-relaxed font-mono">
-                    {selectedRole === "employer"
-                      ? "ID: EMP-2024  ·  PW: pass123"
-                      : "ID: ADM-ROOT  ·  PW: admin@99"}
-                  </p>
-                </div>
-              </div>
             </div>
           )}
 

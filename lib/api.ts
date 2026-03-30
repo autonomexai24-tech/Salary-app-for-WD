@@ -279,3 +279,18 @@ export async function deleteEmployer(id: string): Promise<any> {
     method: "DELETE",
   });
 }
+
+// ─── Auth management (admin-only) ────────────────────────────
+export async function getAuthUsers(): Promise<any> {
+  return request("/auth/users");
+}
+
+export async function changePassword(
+  userId: string,
+  newPassword: string
+): Promise<any> {
+  return request("/auth/change-password", {
+    method: "PUT",
+    body: JSON.stringify({ userId, newPassword }),
+  });
+}

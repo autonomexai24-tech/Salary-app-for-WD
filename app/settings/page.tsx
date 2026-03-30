@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
-import { Trash2, Pencil, X, Check, Upload, Loader2, Eye } from "lucide-react";
+import { Trash2, Pencil, X, Check, Upload, Loader2, Eye, KeyRound, EyeOff } from "lucide-react";
 import {
   getCompany,
   upsertCompany,
@@ -12,6 +12,8 @@ import {
   getEmployers,
   updateEmployer,
   deleteEmployer,
+  getAuthUsers,
+  changePassword,
 } from "@/lib/api";
 
 /* ── Design tokens (exact match with department + employee pages) ── */
@@ -94,6 +96,9 @@ function SettingsPageContent() {
 
   /* ── View Modal state ── */
   const [viewEmployer, setViewEmployer] = useState<Employer | null>(null);
+
+  /* ── Password Change Modal state ── */
+  const [showPwModal, setShowPwModal] = useState(false);
 
   /* ══════ LOAD DATA ON MOUNT ══════ */
 
@@ -316,6 +321,27 @@ function SettingsPageContent() {
           </div>
         </form>
       </section>
+
+      {/* ══════════════════ SECTION 1.5 — PASSWORD MANAGEMENT ══════════════════ */}
+      <section className="mb-10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-neutral-700">Password Management</h2>
+            <p className="text-xs text-neutral-400 mt-0.5">Change login passwords for Employer or Admin accounts</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPwModal(true)}
+            className="h-9 px-4 rounded-lg bg-neutral-800 text-white text-xs font-semibold hover:bg-neutral-700 active:scale-[0.98] transition-all flex items-center gap-2"
+          >
+            <KeyRound size={14} />
+            Change Password
+          </button>
+        </div>
+      </section>
+
+      {/* ── Password Change Modal ── */}
+      {showPwModal && <PasswordModal onClose={() => setShowPwModal(false)} />}
 
       {/* ══════════════════ SECTION 2 — EMPLOYER MANAGEMENT ══════════════════ */}
       <section>
@@ -542,5 +568,205 @@ function SettingsPageContent() {
       )}
 
     </PageContainer>
+  );
+}
+
+/* ══════════════════ PASSWORD CHANGE MODAL ══════════════════ */
+
+function PasswordModal({ onClose }: { onClose: () => void }) {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAuthUsers()
+      .then((res) => {
+        if (res.success && res.data) {
+          setUsers(res.data);
+          if (res.data.length > 0) setSelectedUserId(res.data[0].userId);
+        }
+      })
+      .catch((err) => setError(err.message || "Failed to load users"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSubmit = async () => {
+    setError(null);
+    setSuccess(null);
+
+    if (!selectedUserId) {
+      setError("Please select a user");
+      return;
+    }
+    if (!newPassword.trim()) {
+      setError("Please enter a new password");
+      return;
+    }
+    if (newPassword.length < 4) {
+      setError("Password must be at least 4 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await changePassword(selectedUserId, newPassword);
+      setSuccess(`Password changed for ${res.data?.userId || selectedUserId}`);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      setError(err.message || "Failed to change password");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedUser = users.find((u) => u.userId === selectedUserId);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden">
+
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center">
+              <KeyRound size={14} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-neutral-800">Change Password</h3>
+              <p className="text-[11px] text-neutral-400">Admin access only · No OTP required</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg hover:bg-neutral-100 flex items-center justify-center transition-colors"
+          >
+            <X size={16} className="text-neutral-400" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 flex flex-col gap-4">
+
+          {loading ? (
+            <div className="flex items-center justify-center py-8 text-neutral-400">
+              <Loader2 size={20} className="animate-spin" />
+              <span className="ml-2 text-sm">Loading users…</span>
+            </div>
+          ) : (
+            <>
+              {/* User selector */}
+              <Field label="Select User">
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => { setSelectedUserId(e.target.value); setError(null); setSuccess(null); }}
+                  className={inputClass}
+                >
+                  {users.map((u) => (
+                    <option key={u.userId} value={u.userId}>
+                      {u.userId} — {u.name} ({u.role})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              {/* Selected user badge */}
+              {selectedUser && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-200">
+                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                    selectedUser.role === "ADMIN"
+                      ? "bg-orange-100 text-orange-700"
+                      : "bg-blue-100 text-blue-700"
+                  }`}>
+                    {selectedUser.role}
+                  </span>
+                  <span className="text-xs text-neutral-600 font-medium">{selectedUser.name}</span>
+                  <span className="text-xs text-neutral-400 ml-auto font-mono">{selectedUser.userId}</span>
+                </div>
+              )}
+
+              {/* New password */}
+              <Field label="New Password">
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => { setNewPassword(e.target.value); setError(null); }}
+                    placeholder="Enter new password"
+                    className={inputClass}
+                    style={{ paddingRight: "2.5rem" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </Field>
+
+              {/* Confirm password */}
+              <Field label="Confirm Password">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
+                  placeholder="Re-enter new password"
+                  className={inputClass}
+                />
+              </Field>
+            </>
+          )}
+
+          {/* Error / Success messages */}
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700 font-medium">
+              <span className="flex-1">{error}</span>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+                <X size={12} />
+              </button>
+            </div>
+          )}
+          {success && (
+            <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-xs text-green-700 font-medium">
+              <Check size={14} />
+              <span>{success}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="h-10 px-5 rounded-lg bg-white border border-neutral-200 text-neutral-700 text-sm font-semibold hover:bg-neutral-50 active:scale-[0.98] transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || loading}
+            className="h-10 px-5 rounded-lg bg-neutral-800 text-white text-sm font-semibold hover:bg-neutral-700 active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? "Saving…" : "Update Password"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

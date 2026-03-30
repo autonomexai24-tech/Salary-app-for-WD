@@ -56,4 +56,37 @@ async function getUserById(id) {
   };
 }
 
-module.exports = { authenticateUser, getUserById };
+/**
+ * Change password for a user (admin-only, no OTP).
+ * @param {string} userId - The user's login ID (e.g. "EMP-2024")
+ * @param {string} newPassword - The new plaintext password
+ */
+async function changePassword(userId, newPassword) {
+  const user = await prisma.user.findUnique({ where: { userId } });
+  if (!user) {
+    throw Object.assign(new Error("User not found"), { status: 404 });
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+  await prisma.user.update({
+    where: { userId },
+    data: { password: hashedPassword },
+  });
+
+  return { userId: user.userId, name: user.name, role: user.role };
+}
+
+/**
+ * Get all users (admin-only, for listing in the change-password UI).
+ */
+async function getAllUsers() {
+  const users = await prisma.user.findMany({
+    select: { id: true, userId: true, name: true, role: true },
+    orderBy: { role: "asc" },
+  });
+  return users;
+}
+
+module.exports = { authenticateUser, getUserById, changePassword, getAllUsers };
