@@ -238,7 +238,7 @@ function normalizePayslipData(rawData) {
 }
 
 // ─── Professional A4 Portrait PDF Generator ───────────────────
-function generatePdfStream(payslipDataObj) {
+async function generatePdfStream(payslipDataObj) {
   const doc = new PDFDocument({ margin: 40, size: "A4" }); // A4 Portrait
   const stream = new PassThrough();
   doc.pipe(stream);
@@ -246,6 +246,17 @@ function generatePdfStream(payslipDataObj) {
   // Normalize data to handle BOTH old and new snapshot formats
   const d = normalizePayslipData(payslipDataObj.data);
   const comp = d.company;
+
+  // If snapshot has no logoUrl, fetch the live company data
+  if (!comp.logoUrl) {
+    try {
+      const liveCompany = await prisma.company.findFirst();
+      if (liveCompany && liveCompany.logoUrl) {
+        comp.logoUrl = liveCompany.logoUrl;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   const att = d.attendance;
   const earn = d.earnings;
   const ded = d.deductions;
@@ -266,16 +277,40 @@ function generatePdfStream(payslipDataObj) {
 
   doc.rect(M, Y, W, 80).fill("#1a237e");
 
-  // Logo — try to load actual image, else draw placeholder
+  // Logo — try multiple strategies to load the actual image
   let logoRendered = false;
   if (comp.logoUrl) {
+    // Strategy 1: Try loading from local filesystem
     try {
-      const logoPath = path.join(__dirname, "../../uploads", path.basename(comp.logoUrl));
+      const logoFilename = path.basename(comp.logoUrl);
+      const logoPath = path.join(__dirname, "../../uploads", logoFilename);
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, M + 12, Y + 10, { width: 55, height: 55, fit: [55, 55] });
         logoRendered = true;
       }
-    } catch (e) { /* ignore — will show placeholder */ }
+    } catch (e) { /* ignore */ }
+
+    // Strategy 2: Try fetching from the backend's own HTTP server
+    if (!logoRendered) {
+      try {
+        const PORT = process.env.PORT || 5000;
+        let fetchUrl;
+        if (comp.logoUrl.startsWith("http")) {
+          fetchUrl = comp.logoUrl;
+        } else {
+          fetchUrl = `http://127.0.0.1:${PORT}${comp.logoUrl}`;
+        }
+        const response = await fetch(fetchUrl);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          if (buffer.length > 100) { // sanity check: not an error page
+            doc.image(buffer, M + 12, Y + 10, { width: 55, height: 55, fit: [55, 55] });
+            logoRendered = true;
+          }
+        }
+      } catch (e) { /* ignore — will show placeholder */ }
+    }
   }
   if (!logoRendered) {
     doc.rect(M + 12, Y + 10, 55, 55).fill("#ffffff").stroke("#cccccc");

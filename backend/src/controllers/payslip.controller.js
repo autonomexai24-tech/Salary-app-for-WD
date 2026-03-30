@@ -35,7 +35,7 @@ async function downloadPdf(req, res, next) {
       `attachment; filename=payslip-${payslip.month}-${payslip.year}.pdf`
     );
 
-    const pdfStream = payslipService.generatePdfStream(payslip);
+    const pdfStream = await payslipService.generatePdfStream(payslip);
 
     // Pipe bytes immediately escaping memory bounds securely
     pdfStream.pipe(res);

@@ -61,19 +61,18 @@ async function uploadLogo(req, res, next) {
     // Build the public URL for the logo
     const logoUrl = `/api/uploads/${req.file.filename}`;
 
-    // Update the company record with the logo URL
-    const company = await companyService.upsertCompany({ 
-      name: req.body.companyName || "Company",
-      logoUrl 
-    });
-
-    // If company exists, just update the logoUrl
+    // ONLY update the logoUrl field — don't touch name/email/phone/address
     const prisma = require("../utils/prisma");
     const existing = await prisma.company.findFirst();
     if (existing) {
       await prisma.company.update({
         where: { id: existing.id },
         data: { logoUrl },
+      });
+    } else {
+      // No company exists yet — create a minimal record with just the logo
+      await prisma.company.create({
+        data: { name: "Company", logoUrl },
       });
     }
 

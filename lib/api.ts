@@ -224,8 +224,18 @@ export async function uploadLogo(file: File): Promise<any> {
   const formData = new FormData();
   formData.append("logo", file);
 
+  // Build headers — include auth token but NOT Content-Type (browser sets multipart boundary)
+  const headers: Record<string, string> = {};
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
   const res = await fetch(`${baseUrl}/company/logo`, {
     method: "POST",
+    headers,
     body: formData,
     // No Content-Type header — browser sets multipart boundary automatically
   });

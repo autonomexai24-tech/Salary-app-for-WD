@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
-import { getEmployees, createSalary } from "@/lib/api";
+import { getEmployees, createSalary, getCompany } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -99,10 +99,21 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 
 /* ── Payslip Modal ── */
 function PayslipModal({ payslip, onClose }: { payslip: any; onClose: () => void }) {
+  // Fetch live company data as a fallback for logo (old snapshots may have empty logoUrl)
+  const [liveCompany, setLiveCompany] = React.useState<any>(null);
+  React.useEffect(() => {
+    getCompany().then((c) => setLiveCompany(c)).catch(() => {});
+  }, []);
+
   if (!payslip) return null;
 
   const d = payslip.data || payslip;
-  const comp = d.company || {};
+  const snapshotComp = d.company || {};
+  // If snapshot has no logoUrl, fall back to live company data
+  const comp = {
+    ...snapshotComp,
+    logoUrl: snapshotComp.logoUrl || liveCompany?.logoUrl || "",
+  };
   const s = d.salary || {}; // flat legacy key
 
   // ── Backward-compatible attendance: prefer structured, fall back to flat ──
