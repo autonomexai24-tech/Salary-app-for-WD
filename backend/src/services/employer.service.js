@@ -38,6 +38,23 @@ async function getEmployers({ page = 1, limit = 50 } = {}) {
       include: {
         company: { select: { name: true } },
         _count: { select: { employees: true } },
+        employees: {
+          take: 1,
+          where: { is_deleted: false },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            address: true,
+            dateOfBirth: true,
+            gender: true,
+            qualification: true,
+            salary: true,
+            previousSalary: true,
+            department: { select: { name: true } },
+          },
+        },
       },
     }),
     prisma.employer.count(),

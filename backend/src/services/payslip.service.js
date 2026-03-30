@@ -317,15 +317,28 @@ async function generatePdfStream(payslipDataObj) {
 
   doc.rect(M, Y, W, 80).fill("#1a237e");
 
-  // Logo — load from local filesystem only (no HTTP self-fetch)
+  // Logo — supports base64 data URLs (stored in DB) and legacy filesystem paths
   let logoRendered = false;
   if (comp.logoUrl) {
     try {
-      const logoFilename = path.basename(comp.logoUrl);
-      const logoPath = path.join(__dirname, "../../uploads", logoFilename);
-      if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, M + 12, Y + 10, { width: 55, height: 55, fit: [55, 55] });
-        logoRendered = true;
+      if (comp.logoUrl.startsWith("data:")) {
+        // Base64 data URL — decode and pass buffer to pdfkit
+        const base64Data = comp.logoUrl.split(",")[1];
+        if (base64Data) {
+          const logoBuffer = Buffer.from(base64Data, "base64");
+          if (logoBuffer.length > 100) {
+            doc.image(logoBuffer, M + 12, Y + 10, { width: 55, height: 55, fit: [55, 55] });
+            logoRendered = true;
+          }
+        }
+      } else {
+        // Legacy filesystem path
+        const logoFilename = path.basename(comp.logoUrl);
+        const logoPath = path.join(__dirname, "../../uploads", logoFilename);
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, M + 12, Y + 10, { width: 55, height: 55, fit: [55, 55] });
+          logoRendered = true;
+        }
       }
     } catch (e) { /* ignore */ }
   }

@@ -264,7 +264,7 @@ function SettingsPageContent() {
                 {logoUrl && (
                   <img
                     src={(() => {
-                      if (logoUrl.startsWith('http')) return logoUrl;
+                      if (logoUrl.startsWith('http') || logoUrl.startsWith('data:')) return logoUrl;
                       let base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
                       if (base.endsWith('/api')) base = base.slice(0, -4);
                       return `${base}${logoUrl}`;
@@ -407,10 +407,10 @@ function SettingsPageContent() {
                       {emp.name}
                     </td>
                     <td className="px-4 py-3 text-neutral-600">
-                      {emp.address || "—"}
+                      {emp.address || emp.employees?.[0]?.address || "—"}
                     </td>
                     <td className="px-4 py-3 text-neutral-600 whitespace-nowrap">
-                      {emp.phone || "—"}
+                      {emp.phone || emp.employees?.[0]?.phone || "—"}
                     </td>
                     <td className="px-4 py-3 text-neutral-700 font-medium whitespace-nowrap">
                       {emp._count?.employees ?? 0}

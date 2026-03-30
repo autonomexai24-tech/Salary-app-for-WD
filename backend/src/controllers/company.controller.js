@@ -1,29 +1,14 @@
 const companyService = require("../services/company.service");
 const { companyUpsertSchema } = require("../validations/company.validation");
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
 
-// Configure multer for logo upload
-const uploadsDir = path.join(__dirname, "../../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `company-logo-${Date.now()}${ext}`);
-  },
-});
-
+// Configure multer to store file in memory (not disk) for base64 conversion
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|gif|webp|svg/;
-    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const ext = allowed.test(file.originalname.split(".").pop().toLowerCase());
     const mime = allowed.test(file.mimetype.split("/")[1]);
     if (ext || mime) cb(null, true);
     else cb(new Error("Only image files are allowed"));
@@ -58,10 +43,12 @@ async function uploadLogo(req, res, next) {
       return res.status(400).json({ success: false, message: "No file uploaded" });
     }
 
-    // Build the public URL for the logo
-    const logoUrl = `/api/uploads/${req.file.filename}`;
+    // Convert file buffer to base64 data URL — stored directly in database
+    const base64 = req.file.buffer.toString("base64");
+    const mimeType = req.file.mimetype || "image/png";
+    const logoUrl = `data:${mimeType};base64,${base64}`;
 
-    // ONLY update the logoUrl field — don't touch name/email/phone/address
+    // Save the base64 data URL directly in the company record
     const prisma = require("../utils/prisma");
     const existing = await prisma.company.findFirst();
     if (existing) {
@@ -70,7 +57,6 @@ async function uploadLogo(req, res, next) {
         data: { logoUrl },
       });
     } else {
-      // No company exists yet — create a minimal record with just the logo
       await prisma.company.create({
         data: { name: "Company", logoUrl },
       });
