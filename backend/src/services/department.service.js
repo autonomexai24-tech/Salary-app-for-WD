@@ -19,6 +19,22 @@ async function createDepartment(data) {
     throw error;
   }
 
+  // If a soft-deleted department with the same name exists, restore it
+  const softDeleted = await prisma.department.findFirst({
+    where: {
+      name: { equals: data.name, mode: "insensitive" },
+      is_deleted: true,
+    },
+  });
+
+  if (softDeleted) {
+    const restored = await prisma.department.update({
+      where: { id: softDeleted.id },
+      data: { is_deleted: false, name: data.name },
+    });
+    return restored;
+  }
+
   const department = await prisma.department.create({
     data: { name: data.name },
   });
