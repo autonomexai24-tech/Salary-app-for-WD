@@ -14,10 +14,24 @@ async function createPayslip(req, res, next) {
 async function getPayslips(req, res, next) {
   try {
     const prisma = require("../utils/prisma");
-    const payslips = await prisma.payslip.findMany({
-      orderBy: { createdAt: "desc" },
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const skip = (page - 1) * limit;
+
+    const [payslips, total] = await Promise.all([
+      prisma.payslip.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.payslip.count(),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: payslips,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
-    return res.status(200).json({ success: true, data: payslips });
   } catch (err) {
     next(err);
   }

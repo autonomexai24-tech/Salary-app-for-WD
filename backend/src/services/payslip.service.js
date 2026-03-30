@@ -4,6 +4,31 @@ const { PassThrough } = require("stream");
 const path = require("path");
 const fs = require("fs");
 
+// ─── Concurrency limiter for PDF generation (max 3 simultaneous) ──
+const MAX_CONCURRENT_PDFS = 3;
+let activePdfCount = 0;
+const pdfQueue = [];
+
+function acquirePdfSlot() {
+  return new Promise((resolve) => {
+    if (activePdfCount < MAX_CONCURRENT_PDFS) {
+      activePdfCount++;
+      resolve();
+    } else {
+      pdfQueue.push(resolve);
+    }
+  });
+}
+
+function releasePdfSlot() {
+  activePdfCount--;
+  if (pdfQueue.length > 0) {
+    activePdfCount++;
+    const next = pdfQueue.shift();
+    next();
+  }
+}
+
 // ─── Number to Words (Indian currency) ────────────────────────
 function numberToWords(num) {
   if (num === 0) return "Zero Rupees Only";
@@ -239,10 +264,25 @@ function normalizePayslipData(rawData) {
 
 // ─── Professional A4 Portrait PDF Generator ───────────────────
 async function generatePdfStream(payslipDataObj) {
+  await acquirePdfSlot();
+
   const doc = new PDFDocument({ margin: 40, size: "A4" }); // A4 Portrait
   const stream = new PassThrough();
+
+  // Error handlers to prevent server hangs
+  doc.on("error", (err) => {
+    console.error("PDFDocument error:", err.message);
+    stream.destroy(err);
+  });
+  stream.on("error", (err) => {
+    console.error("PDF stream error:", err.message);
+  });
+  // Release semaphore when stream finishes or errors
+  stream.on("close", () => releasePdfSlot());
+
   doc.pipe(stream);
 
+  try {
   // Normalize data to handle BOTH old and new snapshot formats
   const d = normalizePayslipData(payslipDataObj.data);
   const comp = d.company;
@@ -277,10 +317,9 @@ async function generatePdfStream(payslipDataObj) {
 
   doc.rect(M, Y, W, 80).fill("#1a237e");
 
-  // Logo — try multiple strategies to load the actual image
+  // Logo — load from local filesystem only (no HTTP self-fetch)
   let logoRendered = false;
   if (comp.logoUrl) {
-    // Strategy 1: Try loading from local filesystem
     try {
       const logoFilename = path.basename(comp.logoUrl);
       const logoPath = path.join(__dirname, "../../uploads", logoFilename);
@@ -289,28 +328,6 @@ async function generatePdfStream(payslipDataObj) {
         logoRendered = true;
       }
     } catch (e) { /* ignore */ }
-
-    // Strategy 2: Try fetching from the backend's own HTTP server
-    if (!logoRendered) {
-      try {
-        const PORT = process.env.PORT || 5000;
-        let fetchUrl;
-        if (comp.logoUrl.startsWith("http")) {
-          fetchUrl = comp.logoUrl;
-        } else {
-          fetchUrl = `http://127.0.0.1:${PORT}${comp.logoUrl}`;
-        }
-        const response = await fetch(fetchUrl);
-        if (response.ok) {
-          const arrayBuffer = await response.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          if (buffer.length > 100) { // sanity check: not an error page
-            doc.image(buffer, M + 12, Y + 10, { width: 55, height: 55, fit: [55, 55] });
-            logoRendered = true;
-          }
-        }
-      } catch (e) { /* ignore — will show placeholder */ }
-    }
   }
   if (!logoRendered) {
     doc.rect(M + 12, Y + 10, 55, 55).fill("#ffffff").stroke("#cccccc");
@@ -562,6 +579,11 @@ async function generatePdfStream(payslipDataObj) {
   }
 
   doc.end();
+  } catch (pdfErr) {
+    console.error("PDF generation error:", pdfErr.message);
+    try { doc.end(); } catch (_) { /* already ended */ }
+    stream.destroy(pdfErr);
+  }
   return stream;
 }
 

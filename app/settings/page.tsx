@@ -100,6 +100,9 @@ function SettingsPageContent() {
   /* ── Password Change Modal state ── */
   const [showPwModal, setShowPwModal] = useState(false);
 
+  /* ── Delete employer loading state ── */
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   /* ══════ LOAD DATA ON MOUNT ══════ */
 
   const loadCompany = useCallback(async () => {
@@ -198,11 +201,14 @@ function SettingsPageContent() {
 
   async function handleDeleteEmployer(id: string) {
     setEmployerError(null);
+    setDeletingId(id);
     try {
       await deleteEmployer(id);
       await loadEmployers();
     } catch (err: any) {
       setEmployerError(err.message || "Failed to delete employer");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -437,10 +443,11 @@ function SettingsPageContent() {
                         <button
                           type="button"
                           onClick={() => handleDeleteEmployer(emp.id)}
-                          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-red-200 bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 active:scale-[0.98] transition-all"
+                          disabled={deletingId === emp.id}
+                          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-red-200 bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <Trash2 size={13} />
-                          Delete
+                          {deletingId === emp.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                          {deletingId === emp.id ? "Deleting…" : "Delete"}
                         </button>
                       </div>
                     </td>

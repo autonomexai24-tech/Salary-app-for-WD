@@ -79,6 +79,21 @@ async function createEmployee(data) {
   // Clean previousCompany — not a Prisma column
   delete data.previousCompany;
 
+  // Duplicate guard: prevent rapid double-submissions
+  const existing = await prisma.employee.findFirst({
+    where: {
+      firstName: { equals: data.firstName, mode: "insensitive" },
+      lastName: { equals: data.lastName, mode: "insensitive" },
+      phone: data.phone,
+      is_deleted: false,
+    },
+  });
+  if (existing) {
+    const error = new Error("An employee with this name and phone already exists");
+    error.statusCode = 409;
+    throw error;
+  }
+
   // Create employee with employer link
   const employee = await prisma.employee.create({
     data: {
@@ -171,11 +186,16 @@ async function deleteEmployee(id) {
     where: { id },
   });
 
-  // Dynamically purge the mapping "Employer" string object to keep the Settings View clean.
+  // Only purge the linked employer if no other employees reference it
   if (employee.employerId) {
-    await prisma.employer.deleteMany({
-      where: { id: employee.employerId },
+    const remaining = await prisma.employee.count({
+      where: { employerId: employee.employerId },
     });
+    if (remaining === 0) {
+      await prisma.employer.deleteMany({
+        where: { id: employee.employerId },
+      });
+    }
   }
 
   return deleted;
